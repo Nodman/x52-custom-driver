@@ -27,7 +27,7 @@ A modern, high-performance, and open-source driver for the **Logitech/Saitek X52
 The small rubber thumb stick on the throttle now works as a real Windows mouse, like it did with the original Saitek driver:
 
 - Thumb stick moves the cursor (adjustable speed and deadzone)
-- Throttle mouse button = left click, secondary mouse button = right click, scroll wheel = mouse wheel
+- Throttle mouse button = left click, wheel press = middle click, scroll wheel = mouse wheel
 - Can be switched off in the **THUMB STICK MOUSE** panel if you want it out of the way in game
 - Raise the deadzone if a worn thumb stick makes the cursor drift on its own
 

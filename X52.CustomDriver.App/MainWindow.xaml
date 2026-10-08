@@ -298,7 +298,7 @@
                     <StackPanel>
                         <CheckBox IsChecked="{Binding NubMouseEnabled}" Content="Thumb stick moves the cursor" Style="{StaticResource NeonCheckBox}" Margin="0,0,0,10"/>
                         <CheckBox IsChecked="{Binding NubMouseButtons}" Content="Mouse buttons and scroll" Style="{StaticResource NeonCheckBox}" Margin="0,0,0,15"
-                                  ToolTip="Throttle mouse button = left click, secondary = right click, scroll = wheel"/>
+                                  ToolTip="Throttle mouse button = left click, wheel press = middle click, scroll = wheel"/>
                         <DockPanel Margin="0,0,0,15">
                             <TextBlock Text="SPEED" VerticalAlignment="Center" FontSize="11" Foreground="#888" Width="70"/>
                             <TextBlock Text="{Binding NubMouseSpeed, StringFormat=N0}" DockPanel.Dock="Right" VerticalAlignment="Center" FontSize="11" Foreground="#00D2FF" Margin="10,0,0,0" Width="35"/>

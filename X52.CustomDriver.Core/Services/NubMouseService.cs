@@ -13,8 +13,9 @@ namespace X52.CustomDriver.Core.Services
     ///   X52 (14-byte report):     thumb stick in byte 13, X = low nibble, Y = high nibble (0..15, centre 8)
     ///   X52 Pro (15-byte report): thumb stick in byte 14, same nibble layout
     ///   Buttons are a little-endian bit field starting at byte 8:
-    ///     X52:     mouse primary = bit 30, secondary = 31, scroll down = 32, scroll up = 33
-    ///     X52 Pro: mouse primary = bit 15, scroll down = 16, scroll up = 17, secondary = 18
+    ///     X52:     mouse primary = bit 30, secondary (wheel press) = 31, scroll down = 32, scroll up = 33
+    ///     X52 Pro: mouse primary = bit 15, scroll down = 16, scroll up = 17, secondary (wheel press) = 18
+    ///   Primary -> left click, wheel press -> middle click, scroll -> mouse wheel.
     /// </summary>
     public sealed class NubMouseService : IDisposable
     {
@@ -45,7 +46,7 @@ namespace X52.CustomDriver.Core.Services
         public int RawX => _dx;
         public int RawY => _dy;
 
-        private bool _leftDown, _rightDown, _scrollUpPrev, _scrollDownPrev;
+        private bool _leftDown, _middleDown, _scrollUpPrev, _scrollDownPrev;
         private readonly object _buttonLock = new();
 
         private readonly Thread _thread;
@@ -113,10 +114,10 @@ namespace X52.CustomDriver.Core.Services
                     SendMouse(0, 0, 0, primary ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_LEFTUP);
                     _leftDown = primary;
                 }
-                if (secondary != _rightDown)
+                if (secondary != _middleDown)
                 {
-                    SendMouse(0, 0, 0, secondary ? MOUSEEVENTF_RIGHTDOWN : MOUSEEVENTF_RIGHTUP);
-                    _rightDown = secondary;
+                    SendMouse(0, 0, 0, secondary ? MOUSEEVENTF_MIDDLEDOWN : MOUSEEVENTF_MIDDLEUP);
+                    _middleDown = secondary;
                 }
                 if (scrollUp && !_scrollUpPrev) SendMouse(0, 0, WHEEL_DELTA, MOUSEEVENTF_WHEEL);
                 if (scrollDown && !_scrollDownPrev) SendMouse(0, 0, unchecked((uint)-WHEEL_DELTA), MOUSEEVENTF_WHEEL);
@@ -128,7 +129,7 @@ namespace X52.CustomDriver.Core.Services
         private void ReleaseButtons()
         {
             if (_leftDown) { SendMouse(0, 0, 0, MOUSEEVENTF_LEFTUP); _leftDown = false; }
-            if (_rightDown) { SendMouse(0, 0, 0, MOUSEEVENTF_RIGHTUP); _rightDown = false; }
+            if (_middleDown) { SendMouse(0, 0, 0, MOUSEEVENTF_MIDDLEUP); _middleDown = false; }
         }
 
         private void Loop()
@@ -195,8 +196,8 @@ namespace X52.CustomDriver.Core.Services
         private const uint MOUSEEVENTF_MOVE = 0x0001;
         private const uint MOUSEEVENTF_LEFTDOWN = 0x0002;
         private const uint MOUSEEVENTF_LEFTUP = 0x0004;
-        private const uint MOUSEEVENTF_RIGHTDOWN = 0x0008;
-        private const uint MOUSEEVENTF_RIGHTUP = 0x0010;
+        private const uint MOUSEEVENTF_MIDDLEDOWN = 0x0020;
+        private const uint MOUSEEVENTF_MIDDLEUP = 0x0040;
         private const uint MOUSEEVENTF_WHEEL = 0x0800;
         private const uint WHEEL_DELTA = 120;
 
