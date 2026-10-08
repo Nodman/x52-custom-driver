@@ -120,13 +120,18 @@ namespace X52.CustomDriver.App.ViewModels
 
         public string NubDisplay => $"X {_nubMouse.RawX,3}   Y {_nubMouse.RawY,3}";
 
-        public void ShutdownNubMouse() => _nubMouse.Dispose();
+        public void ShutdownNubMouse()
+        {
+            _nubMouse.Dispose();
+            ReleaseAllMappedKeys();
+        }
 
         public X52Profile CurrentProfile
         {
             get => _currentProfile;
             set
             {
+                if (!ReferenceEquals(_currentProfile, value)) ReleaseAllMappedKeys();
                 _currentProfile = value;
                 WatchMouse(EnsureMouseSettings(value));
                 OnPropertyChanged();
@@ -244,6 +249,7 @@ namespace X52.CustomDriver.App.ViewModels
             {
                 // Stop the cursor immediately and leave the game with a centred, idle stick
                 _nubMouse.Reset();
+                System.Windows.Application.Current?.Dispatcher.BeginInvoke(new Action(ReleaseAllMappedKeys));
                 var last = _state;
                 UpdateVJoy(new X52State
                 {
@@ -317,23 +323,76 @@ namespace X52.CustomDriver.App.ViewModels
             }
         }
 
+        // Mappings whose keys are currently held down, with the exact keys that were pressed
+        private readonly Dictionary<ButtonMapping, List<string>> _heldMappings = new();
+
         private void ProcessKeyMappings()
         {
-            foreach (var mapping in CurrentProfile.Mappings)
+            var mappings = CurrentProfile.Mappings;
+
+            // 1) Release: Hold mappings whose button was let go, and anything no longer in the profile
+            foreach (var held in _heldMappings.ToList())
             {
-                // Check Mode (0 = All modes, else must match CurrentMode)
-                if (mapping.Mode != 0 && mapping.Mode != State.CurrentMode)
-                    continue;
+                var m = held.Key;
+                bool stillMapped = mappings.Contains(m);
+                bool isToggle = string.Equals(m.Action, "Toggle", StringComparison.OrdinalIgnoreCase);
+                bool buttonDown = GetButtonState(State, m.ButtonName);
+                if (!stillMapped || (!isToggle && !buttonDown))
+                {
+                    _keyboardService.Release(held.Value);
+                    _heldMappings.Remove(m);
+                }
+            }
+
+            // 2) Press: react to buttons that just went down
+            foreach (var mapping in mappings)
+            {
+                if (mapping.KeySequence == null || mapping.KeySequence.Count == 0) continue;
+
+                // Mode 0 = all modes, else must match the mode dial
+                if (mapping.Mode != 0 && mapping.Mode != State.CurrentMode) continue;
 
                 bool currentState = GetButtonState(State, mapping.ButtonName);
                 bool prevState = GetButtonState(_prevState, mapping.ButtonName);
+                if (!currentState || prevState) continue; // only on the press edge
 
-                if (currentState && !prevState) // On Press
+                switch ((mapping.Action ?? "Hold").ToLowerInvariant())
                 {
-                    if (mapping.KeySequence != null)
-                        _keyboardService.SendKeys(mapping.KeySequence);
+                    case "tap":
+                        _keyboardService.Tap(mapping.KeySequence);
+                        break;
+
+                    case "toggle":
+                        if (_heldMappings.TryGetValue(mapping, out var keys))
+                        {
+                            _keyboardService.Release(keys);
+                            _heldMappings.Remove(mapping);
+                        }
+                        else
+                        {
+                            var copy = mapping.KeySequence.ToList();
+                            _keyboardService.Press(copy);
+                            _heldMappings[mapping] = copy;
+                        }
+                        break;
+
+                    default: // hold
+                        if (!_heldMappings.ContainsKey(mapping))
+                        {
+                            var copy = mapping.KeySequence.ToList();
+                            _keyboardService.Press(copy);
+                            _heldMappings[mapping] = copy;
+                        }
+                        break;
                 }
             }
+        }
+
+        /// <summary>Let go of every key held by a mapping (profile switch, unplug, exit).</summary>
+        public void ReleaseAllMappedKeys()
+        {
+            _heldMappings.Clear();
+            _keyboardService.ReleaseAll();
         }
 
         private bool GetButtonState(X52State state, string name)

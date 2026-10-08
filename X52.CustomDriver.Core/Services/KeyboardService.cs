@@ -39,10 +39,29 @@ namespace X52.CustomDriver.Core.Services
         struct HARDWAREINPUT { public uint uMsg; public ushort wParamL; public ushort wParamH; }
 
         const uint INPUT_KEYBOARD = 1;
+        const uint KEYEVENTF_EXTENDEDKEY = 0x0001;
         const uint KEYEVENTF_KEYUP = 0x0002;
+        const uint KEYEVENTF_SCANCODE = 0x0008;
+        const uint MAPVK_VK_TO_VSC = 0;
 
         [DllImport("user32.dll", SetLastError = true)]
         static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
+
+        [DllImport("user32.dll")]
+        static extern uint MapVirtualKey(uint uCode, uint uMapType);
+
+        // Keys that need the "extended" flag when sent as scan codes
+        private static readonly HashSet<ushort> ExtendedKeys = new()
+        {
+            0x25, 0x26, 0x27, 0x28,             // arrows
+            0xA3, 0xA5,                         // right ctrl, right alt
+            0x5B, 0x5C,                         // windows keys
+            0x2D, 0x2E, 0x24, 0x23, 0x21, 0x22  // insert, delete, home, end, page up/down
+        };
+
+        // How many active mappings currently hold each key down (two mappings may share e.g. LSHIFT)
+        private readonly Dictionary<ushort, int> _holdCount = new();
+        private readonly object _lock = new();
 
         // Map of friendly names to Virtual Key codes
         private static readonly Dictionary<string, ushort> KeyMap = new Dictionary<string, ushort>(StringComparer.OrdinalIgnoreCase)
@@ -61,29 +80,91 @@ namespace X52.CustomDriver.Core.Services
             // Arrows
             { "UP", 0x26 }, { "DOWN", 0x28 }, { "LEFT", 0x25 }, { "RIGHT", 0x27 },
             // Common
-            { "SPACE", 0x20 }, { "ENTER", 0x0D }, { "ESCAPE", 0x1B }, { "TAB", 0x09 }, { "BACKSPACE", 0x08 }, { "LWIN", 0x5B }
+            { "SPACE", 0x20 }, { "ENTER", 0x0D }, { "ESCAPE", 0x1B }, { "TAB", 0x09 }, { "BACKSPACE", 0x08 }, { "LWIN", 0x5B }, { "RWIN", 0x5C },
+            { "DELETE", 0x2E }, { "INSERT", 0x2D }, { "HOME", 0x24 }, { "END", 0x23 }, { "PAGEUP", 0x21 }, { "PAGEDOWN", 0x22 }
         };
 
-        public void SendKeys(List<string> keys)
+        private static List<ushort> Resolve(IEnumerable<string> keys) =>
+            keys.Select(k => KeyMap.TryGetValue(k, out var vk) ? vk : (ushort)0).Where(v => v != 0).ToList();
+
+        /// <summary>Press keys and keep them held (e.g. while a stick button is held).</summary>
+        public void Press(IEnumerable<string> keys)
         {
-            var vkCodes = keys.Select(k => KeyMap.ContainsKey(k) ? KeyMap[k] : (ushort)0).Where(v => v != 0).ToList();
-            if (vkCodes.Count == 0) return;
-
-            var inputs = new List<INPUT>();
-
-            // Press all modifiers/keys in order
-            foreach (var vk in vkCodes)
+            var toSend = new List<INPUT>();
+            lock (_lock)
             {
-                inputs.Add(new INPUT { type = INPUT_KEYBOARD, u = new InputUnion { ki = new KEYBDINPUT { wVk = vk } } });
+                foreach (var vk in Resolve(keys))
+                {
+                    _holdCount.TryGetValue(vk, out int n);
+                    _holdCount[vk] = n + 1;
+                    if (n == 0) toSend.Add(MakeInput(vk, up: false));
+                }
             }
+            Send(toSend);
+        }
 
-            // Release all in reverse order
-            foreach (var vk in vkCodes.AsEnumerable().Reverse())
+        /// <summary>Release keys pressed with <see cref="Press"/>, in reverse order.</summary>
+        public void Release(IEnumerable<string> keys)
+        {
+            var toSend = new List<INPUT>();
+            lock (_lock)
             {
-                inputs.Add(new INPUT { type = INPUT_KEYBOARD, u = new InputUnion { ki = new KEYBDINPUT { wVk = vk, dwFlags = KEYEVENTF_KEYUP } } });
+                foreach (var vk in Resolve(keys).AsEnumerable().Reverse())
+                {
+                    if (!_holdCount.TryGetValue(vk, out int n) || n <= 0) continue;
+                    if (n == 1) { _holdCount.Remove(vk); toSend.Add(MakeInput(vk, up: true)); }
+                    else _holdCount[vk] = n - 1;
+                }
             }
+            Send(toSend);
+        }
 
-            SendInput((uint)inputs.Count, inputs.ToArray(), Marshal.SizeOf(typeof(INPUT)));
+        /// <summary>Short press. Held ~50 ms so games that poll once per frame still see it.</summary>
+        public void Tap(List<string> keys)
+        {
+            var copy = keys.ToList();
+            Press(copy);
+            System.Threading.Tasks.Task.Delay(50).ContinueWith(_ => Release(copy));
+        }
+
+        /// <summary>Let go of everything this service is holding (unplug, profile switch, exit).</summary>
+        public void ReleaseAll()
+        {
+            var toSend = new List<INPUT>();
+            lock (_lock)
+            {
+                foreach (var vk in _holdCount.Keys) toSend.Add(MakeInput(vk, up: true));
+                _holdCount.Clear();
+            }
+            Send(toSend);
+        }
+
+        // Kept for compatibility: a single tap of the whole combination
+        public void SendKeys(List<string> keys) => Tap(keys);
+
+        // Scan codes work in games that read DirectInput/raw input as well as in normal apps
+        private static INPUT MakeInput(ushort vk, bool up)
+        {
+            uint scan = MapVirtualKey(vk, MAPVK_VK_TO_VSC);
+            var ki = new KEYBDINPUT();
+            if (scan != 0)
+            {
+                ki.wScan = (ushort)scan;
+                ki.dwFlags = KEYEVENTF_SCANCODE | (ExtendedKeys.Contains(vk) ? KEYEVENTF_EXTENDEDKEY : 0);
+            }
+            else
+            {
+                ki.wVk = vk;
+            }
+            if (up) ki.dwFlags |= KEYEVENTF_KEYUP;
+            return new INPUT { type = INPUT_KEYBOARD, u = new InputUnion { ki = ki } };
+        }
+
+        private static void Send(List<INPUT> inputs)
+        {
+            if (inputs.Count == 0) return;
+            try { SendInput((uint)inputs.Count, inputs.ToArray(), Marshal.SizeOf(typeof(INPUT))); }
+            catch { /* never crash the driver over a key event */ }
         }
     }
 }

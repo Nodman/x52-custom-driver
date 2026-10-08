@@ -92,7 +92,7 @@
                 <TabItem Header="BUTTON MAPPINGS">
                     <DockPanel>
                         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
-                            <TextBlock Text="Press a stick button to send keyboard keys. Click the keys cell and press the combination." VerticalAlignment="Center" FontSize="11" Foreground="#666" TextWrapping="Wrap" Width="330"/>
+                            <TextBlock Text="Stick button → keyboard keys. Click the keys cell and press the combination; click Action to choose Hold, Tap or Toggle." VerticalAlignment="Center" FontSize="11" Foreground="#666" TextWrapping="Wrap" Width="360"/>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                                 <Button Content="REMOVE SELECTED" Style="{StaticResource DangerButton}" Margin="0,0,10,0" Click="RemoveMapping_Click"/>
                                 <Button Content="+ ADD MAPPING" Style="{StaticResource NeonButton}" Click="AddMapping_Click"/>
@@ -136,6 +136,22 @@
                                     <DataGridTemplateColumn.CellEditingTemplate>
                                         <DataTemplate>
                                             <TextBox Text="{Binding KeySequenceString, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MacroRecordingTextBox}" PreviewKeyDown="MacroBox_PreviewKeyDown"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellEditingTemplate>
+                                </DataGridTemplateColumn>
+
+                                <DataGridTemplateColumn Width="95">
+                                    <DataGridTemplateColumn.Header>
+                                        <TextBlock Text="Action" ToolTip="Hold: keys held while the button is held. Tap: one short press. Toggle: press once to hold, again to release."/>
+                                    </DataGridTemplateColumn.Header>
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Action}" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="#AAA" FontSize="13"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                    <DataGridTemplateColumn.CellEditingTemplate>
+                                        <DataTemplate>
+                                            <ComboBox SelectedItem="{Binding Action}" ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=local:ProfilesView}, Path=AvailableActions}" Style="{StaticResource ExtremeVisibilityComboBox}" IsDropDownOpen="True"/>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellEditingTemplate>
                                 </DataGridTemplateColumn>

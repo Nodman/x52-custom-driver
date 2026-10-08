@@ -54,7 +54,11 @@ namespace X52.CustomDriver.Core.Models
         public string ButtonName { get; set; } = ""; // e.g. "Trigger", "ButtonD"
         public bool EnableVJoy { get; set; } = true;
         public List<string>? KeySequence { get; set; } // e.g. ["LSHIFT", "G"]
-        public bool IsToggle { get; set; } = false;
+        public bool IsToggle { get; set; } = false; // legacy, unused (see Action)
+
+        // "Hold": keys held while the button is held. "Tap": short press on button press.
+        // "Toggle": first press holds the keys, next press releases them.
+        public string Action { get; set; } = "Hold";
         public int Mode { get; set; } = 0; // 0 = All, 1, 2, 3
 
         [System.Text.Json.Serialization.JsonIgnore]

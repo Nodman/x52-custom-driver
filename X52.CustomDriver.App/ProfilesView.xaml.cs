@@ -35,6 +35,8 @@ namespace X52.CustomDriver.App
 
         public List<int> AvailableModes { get; } = new() { 0, 1, 2, 3 };
 
+        public List<string> AvailableActions { get; } = new() { "Hold", "Tap", "Toggle" };
+
         public ProfilesView()
         {
             InitializeComponent();
