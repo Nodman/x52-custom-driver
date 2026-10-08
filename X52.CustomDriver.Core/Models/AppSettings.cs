@@ -14,5 +14,8 @@ namespace X52.CustomDriver.Core.Models
         public bool NubMouseButtons { get; set; } = true;
         public double NubMouseSpeed { get; set; } = 1200;
         public double NubMouseDeadzone { get; set; } = 1.0;
+        public int NubMouseRotation { get; set; } = 0;   // degrees clockwise: 0, 90, 180, 270
+        public bool NubMouseInvertX { get; set; } = false;
+        public bool NubMouseInvertY { get; set; } = false;
     }
 }

@@ -30,6 +30,12 @@ namespace X52.CustomDriver.Core.Services
         public double Speed { get => Volatile.Read(ref _speed); set => Volatile.Write(ref _speed, Math.Clamp(value, 50, 6000)); }
         public double Deadzone { get => Volatile.Read(ref _deadzone); set => Volatile.Write(ref _deadzone, Math.Clamp(value, 0, 4)); }
 
+        // Orientation fix: rotate movement clockwise by 0/90/180/270 degrees, then mirror
+        private volatile int _rotation;
+        public int Rotation { get => _rotation; set => _rotation = ((value % 360) + 360) % 360 / 90 * 90; }
+        public volatile bool InvertX;
+        public volatile bool InvertY;
+
         // Latest decoded input (written by the HID read thread)
         private volatile int _dx;
         private volatile int _dy;
@@ -146,6 +152,16 @@ namespace X52.CustomDriver.Core.Services
                 }
 
                 int dx = _dx, dy = _dy;
+                // Screen coordinates (y points down): one 90° clockwise turn maps (x, y) -> (-y, x)
+                switch (Rotation)
+                {
+                    case 90:  (dx, dy) = (-dy, dx); break;
+                    case 180: (dx, dy) = (-dx, -dy); break;
+                    case 270: (dx, dy) = (dy, -dx); break;
+                }
+                if (InvertX) dx = -dx;
+                if (InvertY) dy = -dy;
+
                 double mag = Math.Sqrt(dx * dx + dy * dy);
                 double dz = Deadzone;
                 if (mag <= dz)

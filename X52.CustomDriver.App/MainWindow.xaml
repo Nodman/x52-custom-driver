@@ -310,6 +310,16 @@
                             <Slider Minimum="0" Maximum="4" SmallChange="0.1" LargeChange="0.5" Value="{Binding NubMouseDeadzone}" VerticalAlignment="Center"
                                     ToolTip="Raise this if the cursor drifts on its own (worn thumb stick)"/>
                         </DockPanel>
+                        <DockPanel Margin="0,0,0,10">
+                            <TextBlock Text="ROTATION" VerticalAlignment="Center" FontSize="11" Foreground="#888" Width="70"/>
+                            <Button Content="ROTATE 90°" DockPanel.Dock="Right" Padding="8,3" Background="#222" Foreground="#00D2FF" BorderBrush="#00D2FF" BorderThickness="1" Click="RotateNub_Click"
+                                    ToolTip="Turns the cursor direction 90° clockwise each click"/>
+                            <TextBlock Text="{Binding NubRotationText}" VerticalAlignment="Center" FontSize="11" Foreground="#00D2FF"/>
+                        </DockPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                            <CheckBox IsChecked="{Binding NubMouseInvertX}" Content="Invert X" Style="{StaticResource NeonCheckBox}" Margin="0,0,25,0"/>
+                            <CheckBox IsChecked="{Binding NubMouseInvertY}" Content="Invert Y" Style="{StaticResource NeonCheckBox}"/>
+                        </StackPanel>
                         <TextBlock Text="{Binding NubDisplay}" FontSize="11" FontFamily="Consolas" Foreground="#555"/>
                     </StackPanel>
                 </Border>

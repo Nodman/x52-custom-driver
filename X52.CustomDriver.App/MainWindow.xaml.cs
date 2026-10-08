@@ -47,6 +47,11 @@ namespace X52.CustomDriver.App
             if (DataContext is X52ViewModel vm) vm.ResetCalibration();
         }
 
+        private void RotateNub_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is X52ViewModel vm) vm.RotateNubMouse();
+        }
+
         private void EditMappings_Click(object sender, RoutedEventArgs e)
         {
             if (DataContext is X52ViewModel vm)

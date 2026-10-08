@@ -115,6 +115,54 @@ namespace X52.CustomDriver.App.ViewModels
             }
         }
 
+        public int NubMouseRotation
+        {
+            get => _settingsService.CurrentSettings.NubMouseRotation;
+            set
+            {
+                int r = ((value % 360) + 360) % 360 / 90 * 90;
+                _settingsService.CurrentSettings.NubMouseRotation = r;
+                _nubMouse.Rotation = r;
+                _settingsService.SaveSettings();
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(NubRotationText));
+            }
+        }
+
+        public string NubRotationText => NubMouseRotation switch
+        {
+            90 => "90° clockwise",
+            180 => "180°",
+            270 => "90° counter-clockwise",
+            _ => "0° (none)"
+        };
+
+        public void RotateNubMouse() => NubMouseRotation += 90;
+
+        public bool NubMouseInvertX
+        {
+            get => _settingsService.CurrentSettings.NubMouseInvertX;
+            set
+            {
+                _settingsService.CurrentSettings.NubMouseInvertX = value;
+                _nubMouse.InvertX = value;
+                _settingsService.SaveSettings();
+                OnPropertyChanged();
+            }
+        }
+
+        public bool NubMouseInvertY
+        {
+            get => _settingsService.CurrentSettings.NubMouseInvertY;
+            set
+            {
+                _settingsService.CurrentSettings.NubMouseInvertY = value;
+                _nubMouse.InvertY = value;
+                _settingsService.SaveSettings();
+                OnPropertyChanged();
+            }
+        }
+
         public string NubDisplay => $"X {_nubMouse.RawX,3}   Y {_nubMouse.RawY,3}";
 
         public void ShutdownNubMouse() => _nubMouse.Dispose();
@@ -184,6 +232,9 @@ namespace X52.CustomDriver.App.ViewModels
             _nubMouse.ButtonsEnabled = cfg.NubMouseButtons;
             _nubMouse.Speed = cfg.NubMouseSpeed;
             _nubMouse.Deadzone = cfg.NubMouseDeadzone;
+            _nubMouse.Rotation = cfg.NubMouseRotation;
+            _nubMouse.InvertX = cfg.NubMouseInvertX;
+            _nubMouse.InvertY = cfg.NubMouseInvertY;
 
             _profileService.OnProfileChanged += (s, p) =>
             {
