@@ -1,0 +1,95 @@
+<Window x:Class="X52.CustomDriver.App.CurveEditorWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Ærakon x52 driver - Axis Curves" Height="520" Width="760" ResizeMode="NoResize"
+    Background="#050505" Foreground="White" WindowStartupLocation="CenterOwner" FontFamily="Segoe UI Semibold">
+
+    <Window.Resources>
+        <Style x:Key="AxisButton" TargetType="Button">
+            <Setter Property="Background" Value="#222"/>
+            <Setter Property="Foreground" Value="#00D2FF"/>
+            <Setter Property="BorderBrush" Value="#00D2FF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="14,6"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+        </Style>
+        <Style x:Key="ParamLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="#888"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Width" Value="95"/>
+        </Style>
+        <Style x:Key="ParamValue" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="#00D2FF"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Width" Value="40"/>
+            <Setter Property="TextAlignment" Value="Right"/>
+            <Setter Property="DockPanel.Dock" Value="Right"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,0,0,15">
+            <Button x:Name="AxisXButton" Content="STICK X (ROLL)" Tag="X" Style="{StaticResource AxisButton}" Click="Axis_Click"/>
+            <Button x:Name="AxisYButton" Content="STICK Y (PITCH)" Tag="Y" Style="{StaticResource AxisButton}" Click="Axis_Click"/>
+            <Button x:Name="AxisTwistButton" Content="TWIST (RUDDER)" Tag="Twist" Style="{StaticResource AxisButton}" Click="Axis_Click"/>
+            <TextBlock x:Name="ProfileText" VerticalAlignment="Center" Margin="15,0,0,0" FontSize="11" Foreground="#555"/>
+        </StackPanel>
+
+        <!-- Graph: x = physical input, y = output sent to the game -->
+        <Border Grid.Row="1" Grid.Column="0" Background="#111" CornerRadius="10" Padding="10" VerticalAlignment="Top">
+            <StackPanel>
+                <Canvas x:Name="GraphCanvas" Width="320" Height="320" Background="#0A0A0A" ClipToBounds="True"/>
+                <DockPanel Margin="0,6,0,0">
+                    <TextBlock Text="input →" FontSize="10" Foreground="#555"/>
+                    <TextBlock x:Name="LiveText" FontSize="10" FontFamily="Consolas" Foreground="#FF0055" HorizontalAlignment="Right"/>
+                </DockPanel>
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="1" Grid.Column="1" Background="#111" CornerRadius="10" Padding="15" Margin="15,0,0,0" VerticalAlignment="Top">
+            <StackPanel>
+                <DockPanel Margin="0,0,0,14">
+                    <TextBlock Text="DEADZONE" Style="{StaticResource ParamLabel}"/>
+                    <TextBlock Text="{Binding Value, ElementName=DeadzoneSlider, StringFormat={}{0:N0}%}" Style="{StaticResource ParamValue}"/>
+                    <Slider x:Name="DeadzoneSlider" Minimum="0" Maximum="30" SmallChange="1" LargeChange="5" ValueChanged="Slider_Changed"
+                            ToolTip="Stick travel around centre that is ignored"/>
+                </DockPanel>
+                <DockPanel Margin="0,0,0,14">
+                    <TextBlock Text="CURVATURE" Style="{StaticResource ParamLabel}"/>
+                    <TextBlock Text="{Binding Value, ElementName=CurvatureSlider, StringFormat={}{0:N0}%}" Style="{StaticResource ParamValue}"/>
+                    <Slider x:Name="CurvatureSlider" Minimum="0" Maximum="100" SmallChange="1" LargeChange="10" ValueChanged="Slider_Changed"
+                            ToolTip="Higher = gentler around centre, still full deflection at the end"/>
+                </DockPanel>
+                <DockPanel Margin="0,0,0,14">
+                    <TextBlock Text="SATURATION X" Style="{StaticResource ParamLabel}"/>
+                    <TextBlock Text="{Binding Value, ElementName=SatXSlider, StringFormat={}{0:N0}%}" Style="{StaticResource ParamValue}"/>
+                    <Slider x:Name="SatXSlider" Minimum="10" Maximum="100" SmallChange="1" LargeChange="5" ValueChanged="Slider_Changed"
+                            ToolTip="Stick travel at which the output reaches its maximum"/>
+                </DockPanel>
+                <DockPanel Margin="0,0,0,14">
+                    <TextBlock Text="SATURATION Y" Style="{StaticResource ParamLabel}"/>
+                    <TextBlock Text="{Binding Value, ElementName=SatYSlider, StringFormat={}{0:N0}%}" Style="{StaticResource ParamValue}"/>
+                    <Slider x:Name="SatYSlider" Minimum="10" Maximum="100" SmallChange="1" LargeChange="5" ValueChanged="Slider_Changed"
+                            ToolTip="Maximum output sent to the game"/>
+                </DockPanel>
+                <CheckBox x:Name="InvertBox" Content="Invert axis" Foreground="White" Margin="0,0,0,20" Checked="Invert_Changed" Unchecked="Invert_Changed"/>
+
+                <Button Content="RESET TO LINEAR" Padding="8" Background="#222" Foreground="#FF5555" BorderBrush="#FF5555" BorderThickness="1" Click="Reset_Click"/>
+
+                <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="#555" Margin="0,20,0,0"
+                           Text="Curves are saved in the active profile, so each game profile can have its own. Changes apply instantly."/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

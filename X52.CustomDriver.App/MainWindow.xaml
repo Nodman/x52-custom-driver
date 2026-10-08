@@ -277,21 +277,9 @@
                     <TextBlock Text="{Binding ProfileName}" Foreground="#00D2FF" FontWeight="Bold"/>
                 </Border>
 
-                <TextBlock Text="AXIS SENSITIVITY" FontWeight="Bold" Margin="0,30,0,10" Foreground="#555"/>
-                <Border Background="#111" CornerRadius="10" Padding="15">
-                    <StackPanel>
-                        <DockPanel Margin="0,0,0,15">
-                            <TextBlock Text="X AXIS" VerticalAlignment="Center" FontSize="11" Foreground="#888" Width="45"/>
-                            <TextBlock Text="{Binding SensitivityX, StringFormat=N1}" DockPanel.Dock="Right" VerticalAlignment="Center" FontSize="11" Foreground="#00D2FF" Margin="10,0,0,0"/>
-                            <Slider Minimum="0.1" Maximum="3.0" Value="{Binding SensitivityX}" VerticalAlignment="Center"/>
-                        </DockPanel>
-                        <DockPanel>
-                            <TextBlock Text="Y AXIS" VerticalAlignment="Center" FontSize="11" Foreground="#888" Width="45"/>
-                            <TextBlock Text="{Binding SensitivityY, StringFormat=N1}" DockPanel.Dock="Right" VerticalAlignment="Center" FontSize="11" Foreground="#00D2FF" Margin="10,0,0,0"/>
-                            <Slider Minimum="0.1" Maximum="3.0" Value="{Binding SensitivityY}" VerticalAlignment="Center"/>
-                        </DockPanel>
-                    </StackPanel>
-                </Border>
+                <TextBlock Text="AXIS CURVES" FontWeight="Bold" Margin="0,30,0,10" Foreground="#555"/>
+                <Button Content="EDIT AXIS CURVES" Padding="10" Background="#222" Foreground="#00D2FF" BorderBrush="#00D2FF" BorderThickness="1" Click="EditCurves_Click"
+                        ToolTip="Deadzone, curvature and saturation for stick X/Y and twist, saved per profile"/>
 
                 <TextBlock Text="THUMB STICK MOUSE" FontWeight="Bold" Margin="0,30,0,10" Foreground="#555"/>
                 <Border Background="#111" CornerRadius="10" Padding="15">

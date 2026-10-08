@@ -52,6 +52,16 @@ namespace X52.CustomDriver.App
             if (DataContext is X52ViewModel vm) vm.RotateNubMouse();
         }
 
+        private void EditCurves_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is X52ViewModel vm)
+            {
+                var editor = new CurveEditorWindow(vm);
+                editor.Owner = this;
+                editor.Show();
+            }
+        }
+
         private void EditMappings_Click(object sender, RoutedEventArgs e)
         {
             if (DataContext is X52ViewModel vm)

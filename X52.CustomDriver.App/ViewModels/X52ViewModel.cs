@@ -337,9 +337,11 @@ namespace X52.CustomDriver.App.ViewModels
             if (!_vJoyService.IsAvailable) return;
             
             // --- AXES MAPPING (Synced with Console v1.1.7) ---
-            int vX = s.X * 16;
-            int vY = s.Y * 16;
-            int vZ = s.Z * 32;
+            // Axis response curves (per profile)
+            var axes = CurrentProfile.AxisSettings;
+            int vX = CurveToVJoy(axes.CurveX, s.X, 2048);
+            int vY = CurveToVJoy(axes.CurveY, s.Y, 2048);
+            int vZ = CurveToVJoy(axes.CurveTwist, s.Z, 1024);
 
             // Throttle Calibration: Physical [245 -> 10] maps to [255 -> 0]
             // Scale to vJoy (0-32768)
@@ -388,6 +390,37 @@ namespace X52.CustomDriver.App.ViewModels
                  _vJoyService.SetButton(baseId + 31, s.Hat2Right); // Button 32
             }
         }
+
+        // --- Axis curves ---
+        private static double Centered(int value, int range) => Math.Clamp((value - range / 2.0) / (range / 2.0), -1.0, 1.0);
+
+        private static int CurveToVJoy(AxisCurve? curve, int value, int range)
+        {
+            double t = Centered(value, range);
+            double o = curve != null ? curve.Apply(t) : t;
+            return Math.Clamp((int)Math.Round(16384 + o * 16384), 0, 32768);
+        }
+
+        public AxisCurve GetCurve(string axis)
+        {
+            var a = CurrentProfile.AxisSettings;
+            switch (axis)
+            {
+                case "Y": return a.CurveY ??= new AxisCurve();
+                case "Twist": return a.CurveTwist ??= new AxisCurve();
+                default: return a.CurveX ??= new AxisCurve();
+            }
+        }
+
+        /// <summary>Current physical position of an axis, -1..1, before the curve.</summary>
+        public double GetLiveInput(string axis) => axis switch
+        {
+            "Y" => Centered(State.Y, 2048),
+            "Twist" => Centered(State.Z, 1024),
+            _ => Centered(State.X, 2048)
+        };
+
+        public void SaveProfiles() => _profileService.SaveProfiles();
 
         public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string? name = null)
