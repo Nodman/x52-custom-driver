@@ -25,6 +25,26 @@
             <Setter Property="Foreground" Value="#888"/>
             <Setter Property="Margin" Value="0,10,0,2"/>
         </Style>
+        <Style x:Key="NeonCheckBox" TargetType="CheckBox">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <StackPanel Orientation="Horizontal" Background="Transparent">
+                            <Border Width="16" Height="16" CornerRadius="3" BorderBrush="#00D2FF" BorderThickness="1" Background="#222">
+                                <Path Data="M 3,8 L 6,11 L 13,3" Stroke="#00D2FF" StrokeThickness="2" Visibility="Hidden" Name="CheckMark"/>
+                            </Border>
+                            <ContentPresenter Margin="10,0,0,0" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
@@ -270,6 +290,27 @@
                             <TextBlock Text="{Binding SensitivityY, StringFormat=N1}" DockPanel.Dock="Right" VerticalAlignment="Center" FontSize="11" Foreground="#00D2FF" Margin="10,0,0,0"/>
                             <Slider Minimum="0.1" Maximum="3.0" Value="{Binding SensitivityY}" VerticalAlignment="Center"/>
                         </DockPanel>
+                    </StackPanel>
+                </Border>
+
+                <TextBlock Text="THUMB STICK MOUSE" FontWeight="Bold" Margin="0,30,0,10" Foreground="#555"/>
+                <Border Background="#111" CornerRadius="10" Padding="15">
+                    <StackPanel>
+                        <CheckBox IsChecked="{Binding NubMouseEnabled}" Content="Thumb stick moves the cursor" Style="{StaticResource NeonCheckBox}" Margin="0,0,0,10"/>
+                        <CheckBox IsChecked="{Binding NubMouseButtons}" Content="Mouse buttons and scroll" Style="{StaticResource NeonCheckBox}" Margin="0,0,0,15"
+                                  ToolTip="Throttle mouse button = left click, secondary = right click, scroll = wheel"/>
+                        <DockPanel Margin="0,0,0,15">
+                            <TextBlock Text="SPEED" VerticalAlignment="Center" FontSize="11" Foreground="#888" Width="70"/>
+                            <TextBlock Text="{Binding NubMouseSpeed, StringFormat=N0}" DockPanel.Dock="Right" VerticalAlignment="Center" FontSize="11" Foreground="#00D2FF" Margin="10,0,0,0" Width="35"/>
+                            <Slider Minimum="100" Maximum="4000" SmallChange="50" LargeChange="250" Value="{Binding NubMouseSpeed}" VerticalAlignment="Center"/>
+                        </DockPanel>
+                        <DockPanel Margin="0,0,0,10">
+                            <TextBlock Text="DEADZONE" VerticalAlignment="Center" FontSize="11" Foreground="#888" Width="70"/>
+                            <TextBlock Text="{Binding NubMouseDeadzone, StringFormat=N1}" DockPanel.Dock="Right" VerticalAlignment="Center" FontSize="11" Foreground="#00D2FF" Margin="10,0,0,0" Width="35"/>
+                            <Slider Minimum="0" Maximum="4" SmallChange="0.1" LargeChange="0.5" Value="{Binding NubMouseDeadzone}" VerticalAlignment="Center"
+                                    ToolTip="Raise this if the cursor drifts on its own (worn thumb stick)"/>
+                        </DockPanel>
+                        <TextBlock Text="{Binding NubDisplay}" FontSize="11" FontFamily="Consolas" Foreground="#555"/>
                     </StackPanel>
                 </Border>
 

@@ -22,6 +22,15 @@ A modern, high-performance, and open-source driver for the **Logitech/Saitek X52
   - ~6MB installer compared to the hundreds of MBs of the original software.
   - Easy installation and uninstallation with custom "Æ52" branding.
 
+## 🖱️ Thumb Stick Mouse (v1.1.9)
+
+The small rubber thumb stick on the throttle now works as a real Windows mouse, like it did with the original Saitek driver:
+
+- Thumb stick moves the cursor (adjustable speed and deadzone)
+- Throttle mouse button = left click, secondary mouse button = right click, scroll wheel = mouse wheel
+- Can be switched off in the **THUMB STICK MOUSE** panel if you want it out of the way in game
+- Raise the deadzone if a worn thumb stick makes the cursor drift on its own
+
 ## 🛠️ Requirements
 
 1. **vJoy**: This driver sends data to a virtual joystick.

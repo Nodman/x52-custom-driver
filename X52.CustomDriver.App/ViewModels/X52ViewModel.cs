@@ -15,6 +15,8 @@ namespace X52.CustomDriver.App.ViewModels
         private readonly IHidService _hidService;
         private readonly IVJoyService _vJoyService;
         private readonly KeyboardService _keyboardService = new();
+        private readonly NubMouseService _nubMouse = new();
+        public NubMouseService NubMouse => _nubMouse;
         private readonly ProfileService _profileService;
         private readonly SettingsService _settingsService;
         public ProfileService ProfileService => _profileService;
@@ -63,6 +65,59 @@ namespace X52.CustomDriver.App.ViewModels
                 OnPropertyChanged(); 
             }
         }
+
+        // --- Thumb stick (mouse nub) -> Windows mouse ---
+        public bool NubMouseEnabled
+        {
+            get => _settingsService.CurrentSettings.NubMouseEnabled;
+            set
+            {
+                _settingsService.CurrentSettings.NubMouseEnabled = value;
+                _nubMouse.Enabled = value;
+                _settingsService.SaveSettings();
+                OnPropertyChanged();
+            }
+        }
+
+        public bool NubMouseButtons
+        {
+            get => _settingsService.CurrentSettings.NubMouseButtons;
+            set
+            {
+                _settingsService.CurrentSettings.NubMouseButtons = value;
+                _nubMouse.ButtonsEnabled = value;
+                _settingsService.SaveSettings();
+                OnPropertyChanged();
+            }
+        }
+
+        public double NubMouseSpeed
+        {
+            get => _settingsService.CurrentSettings.NubMouseSpeed;
+            set
+            {
+                _settingsService.CurrentSettings.NubMouseSpeed = value;
+                _nubMouse.Speed = value;
+                _settingsService.SaveSettings();
+                OnPropertyChanged();
+            }
+        }
+
+        public double NubMouseDeadzone
+        {
+            get => _settingsService.CurrentSettings.NubMouseDeadzone;
+            set
+            {
+                _settingsService.CurrentSettings.NubMouseDeadzone = value;
+                _nubMouse.Deadzone = value;
+                _settingsService.SaveSettings();
+                OnPropertyChanged();
+            }
+        }
+
+        public string NubDisplay => $"X {_nubMouse.RawX,3}   Y {_nubMouse.RawY,3}";
+
+        public void ShutdownNubMouse() => _nubMouse.Dispose();
 
         public double SensitivityX
         {
@@ -124,6 +179,12 @@ namespace X52.CustomDriver.App.ViewModels
 
             InitializeButtons();
 
+            var cfg = _settingsService.CurrentSettings;
+            _nubMouse.Enabled = cfg.NubMouseEnabled;
+            _nubMouse.ButtonsEnabled = cfg.NubMouseButtons;
+            _nubMouse.Speed = cfg.NubMouseSpeed;
+            _nubMouse.Deadzone = cfg.NubMouseDeadzone;
+
             _profileService.OnProfileChanged += (s, p) =>
             {
                 System.Windows.Application.Current.Dispatcher.Invoke(() =>
@@ -134,6 +195,9 @@ namespace X52.CustomDriver.App.ViewModels
 
             _hidService.OnStateChanged += (s, e) =>
             {
+                // Mouse emulation runs on the HID thread so it never waits for the UI
+                _nubMouse.Update(e.RawData, e.ProductId);
+
                 System.Windows.Application.Current.Dispatcher.Invoke(() =>
                 {
                     State = e;
@@ -150,6 +214,7 @@ namespace X52.CustomDriver.App.ViewModels
                     OnPropertyChanged(nameof(IsConnected));
                     OnPropertyChanged(nameof(IsVJoyActive));
                     OnPropertyChanged(nameof(RawDataString));
+                    OnPropertyChanged(nameof(NubDisplay));
                     OnPropertyChanged(nameof(IsMode1));
                     OnPropertyChanged(nameof(IsMode2));
                     OnPropertyChanged(nameof(IsMode3));

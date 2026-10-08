@@ -13,6 +13,7 @@ namespace X52.CustomDriver.App
         private IVJoyService? _vJoyService;
         private ProfileService? _profileService;
         private NotifyIcon? _notifyIcon;
+        private X52ViewModel? _viewModel;
 
         public static bool IsExiting { get; set; } = false;
 
@@ -68,6 +69,7 @@ namespace X52.CustomDriver.App
 
                 System.IO.File.AppendAllText(logPath, "Starting UI...\n");
                 var viewModel = new X52ViewModel(_hidService, _vJoyService, _profileService!, settingsService);
+                _viewModel = viewModel;
                 var mainWindow = new MainWindow(viewModel);
                 System.IO.File.AppendAllText(logPath, "Showing MainWindow...\n");
 
@@ -98,6 +100,7 @@ namespace X52.CustomDriver.App
         protected override void OnExit(ExitEventArgs e)
         {
             _hidService?.StopListening();
+            _viewModel?.ShutdownNubMouse();
             _vJoyService?.Shutdown();
             _notifyIcon?.Dispose();
             base.OnExit(e);
