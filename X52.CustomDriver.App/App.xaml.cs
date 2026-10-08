@@ -62,6 +62,23 @@ namespace X52.CustomDriver.App
 
                 var contextMenu = new ContextMenuStrip();
                 contextMenu.Items.Add("Open", null, (s, args) => ShowMainWindow());
+
+                // Profile submenu: switch the active profile from the tray
+                var profileMenu = new ToolStripMenuItem("Profile");
+                profileMenu.DropDownItems.Add("..."); // placeholder so the submenu arrow shows
+                profileMenu.DropDownOpening += (s, args) =>
+                {
+                    profileMenu.DropDownItems.Clear();
+                    if (_viewModel == null) return;
+                    foreach (var profile in _viewModel.Profiles)
+                    {
+                        var target = profile;
+                        var item = new ToolStripMenuItem(profile.Name) { Checked = ReferenceEquals(profile, _viewModel.CurrentProfile) };
+                        item.Click += (s2, a2) => _viewModel?.ActivateProfile(target);
+                        profileMenu.DropDownItems.Add(item);
+                    }
+                };
+                contextMenu.Items.Add(profileMenu);
                 contextMenu.Items.Add("Exit", null, (s, args) => { IsExiting = true; System.Windows.Application.Current.Shutdown(); });
                 _notifyIcon.ContextMenuStrip = contextMenu;
 

@@ -80,6 +80,20 @@ namespace X52.CustomDriver.App
         {
             if (_vm == null) return;
             ActiveProfileText.Text = $"Active now: {_vm.CurrentProfile.Name}";
+            UpdateMakeActiveButton();
+        }
+
+        private void UpdateMakeActiveButton()
+        {
+            if (_vm == null) return;
+            bool isActive = _selected != null && ReferenceEquals(_selected, _vm.CurrentProfile);
+            MakeActiveButton.IsEnabled = _selected != null && !isActive;
+            MakeActiveButton.Content = isActive ? "ACTIVE ✓" : "MAKE ACTIVE";
+        }
+
+        private void MakeActive_Click(object sender, RoutedEventArgs e)
+        {
+            if (_vm != null && _selected != null) _vm.ActivateProfile(_selected);
         }
 
         private static bool IsDefault(X52Profile p) => p.Name == "Default";
@@ -111,6 +125,7 @@ namespace X52.CustomDriver.App
             MappingsGrid.ItemsSource = _selected.Mappings;
             MousePanel.DataContext = _vm.EnsureMouseSettings(_selected);
             CurveEditor.SetProfile(_selected);
+            UpdateMakeActiveButton();
         }
 
         private void RefreshList(X52Profile? select)

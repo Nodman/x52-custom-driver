@@ -80,6 +80,13 @@ namespace X52.CustomDriver.App
             if (DataContext is X52ViewModel vm) vm.ResetCalibration();
         }
 
+        private void ActiveProfileCombo_DropDownOpened(object? sender, EventArgs e)
+        {
+            // The profile list is a plain list: refresh so new/renamed profiles show up
+            ActiveProfileCombo.Items.Refresh();
+            if (DataContext is X52ViewModel vm) ActiveProfileCombo.SelectedItem = vm.CurrentProfile;
+        }
+
         private void RotateNub_Click(object sender, RoutedEventArgs e)
         {
             if (DataContext is X52ViewModel vm) vm.RotateNubMouse();

@@ -131,6 +131,7 @@ namespace X52.CustomDriver.App.ViewModels
                 WatchMouse(EnsureMouseSettings(value));
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(ProfileName));
+                OnPropertyChanged(nameof(ActiveProfileSelection));
                 OnPropertyChanged(nameof(NubMouseStatus));
             }
         }
@@ -180,6 +181,18 @@ namespace X52.CustomDriver.App.ViewModels
         public string NubMouseStatus => EnsureMouseSettings(CurrentProfile).Enabled ? "ON" : "OFF";
 
         public string ProfileName => CurrentProfile.Name;
+
+        // --- Manual profile switching ---
+        public IReadOnlyList<X52Profile> Profiles => _profileService.Profiles;
+
+        public void ActivateProfile(X52Profile profile) => _profileService.SetActiveProfile(profile);
+
+        /// <summary>Two-way target for the profile picker on the LIVE tab.</summary>
+        public X52Profile? ActiveProfileSelection
+        {
+            get => CurrentProfile;
+            set { if (value != null) ActivateProfile(value); }
+        }
 
         public string RawDataString => State.RawData != null ? BitConverter.ToString(State.RawData).Replace("-", " ") : "No Data";
 

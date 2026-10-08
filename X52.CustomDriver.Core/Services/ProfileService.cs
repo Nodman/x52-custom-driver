@@ -16,6 +16,9 @@ namespace X52.CustomDriver.Core.Services
         private readonly string _profilesPath;
         private List<X52Profile> _profiles = new();
         private X52Profile _activeProfile = new();
+        // Profile the game watcher last picked; a manual choice stays until this changes
+        private X52Profile? _lastAutoTarget;
+        private readonly object _switchLock = new();
         private CancellationTokenSource? _ccts;
 
         public event EventHandler<X52Profile>? OnProfileChanged;
@@ -33,6 +36,21 @@ namespace X52.CustomDriver.Core.Services
             }
             
             _activeProfile = _profiles.First(p => p.Name == "Default");
+            _lastAutoTarget = _activeProfile;
+        }
+
+        /// <summary>
+        /// Manual switch. It stays active until a game with its own profile starts or closes;
+        /// then automatic switching takes over again.
+        /// </summary>
+        public void SetActiveProfile(X52Profile profile)
+        {
+            lock (_switchLock)
+            {
+                if (!_profiles.Contains(profile) || ReferenceEquals(profile, _activeProfile)) return;
+                _activeProfile = profile;
+            }
+            OnProfileChanged?.Invoke(this, profile);
         }
 
         private void LoadProfiles()
@@ -87,7 +105,10 @@ namespace X52.CustomDriver.Core.Services
         {
             if (_profiles.Count <= 1) return; // Don't delete the last profile
             _profiles.Remove(profile);
+            if (ReferenceEquals(_lastAutoTarget, profile)) _lastAutoTarget = null;
             SaveProfiles();
+            if (ReferenceEquals(_activeProfile, profile))
+                SetActiveProfile(_profiles.FirstOrDefault(p => p.Name == "Default") ?? _profiles[0]);
         }
 
         public void UpdateProfile(X52Profile profile)
@@ -147,11 +168,21 @@ namespace X52.CustomDriver.Core.Services
 
                     var targetProfile = matchedProfile ?? _profiles.First(p => p.Name == "Default");
 
-                    if (targetProfile.Name != _activeProfile.Name)
+                    // Only switch when the running game changes, so a manual choice isn't undone every 5 s
+                    bool changed = false;
+                    lock (_switchLock)
                     {
-                        _activeProfile = targetProfile;
-                        OnProfileChanged?.Invoke(this, _activeProfile);
+                        if (!ReferenceEquals(targetProfile, _lastAutoTarget))
+                        {
+                            _lastAutoTarget = targetProfile;
+                            if (!ReferenceEquals(targetProfile, _activeProfile))
+                            {
+                                _activeProfile = targetProfile;
+                                changed = true;
+                            }
+                        }
                     }
+                    if (changed) OnProfileChanged?.Invoke(this, targetProfile);
                 }
                 catch { }
 
