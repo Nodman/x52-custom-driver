@@ -67,53 +67,8 @@ namespace X52.CustomDriver.App.ViewModels
         }
 
         // --- Thumb stick (mouse nub) -> Windows mouse ---
-        public bool NubMouseEnabled
-        {
-            get => _settingsService.CurrentSettings.NubMouseEnabled;
-            set
-            {
-                _settingsService.CurrentSettings.NubMouseEnabled = value;
-                _nubMouse.Enabled = value;
-                _settingsService.SaveSettings();
-                OnPropertyChanged();
-            }
-        }
-
-        public bool NubMouseButtons
-        {
-            get => _settingsService.CurrentSettings.NubMouseButtons;
-            set
-            {
-                _settingsService.CurrentSettings.NubMouseButtons = value;
-                _nubMouse.ButtonsEnabled = value;
-                _settingsService.SaveSettings();
-                OnPropertyChanged();
-            }
-        }
-
-        public double NubMouseSpeed
-        {
-            get => _settingsService.CurrentSettings.NubMouseSpeed;
-            set
-            {
-                _settingsService.CurrentSettings.NubMouseSpeed = value;
-                _nubMouse.Speed = value;
-                _settingsService.SaveSettings();
-                OnPropertyChanged();
-            }
-        }
-
-        public double NubMouseDeadzone
-        {
-            get => _settingsService.CurrentSettings.NubMouseDeadzone;
-            set
-            {
-                _settingsService.CurrentSettings.NubMouseDeadzone = value;
-                _nubMouse.Deadzone = value;
-                _settingsService.SaveSettings();
-                OnPropertyChanged();
-            }
-        }
+        // Enable/buttons/speed/deadzone live in each profile (see CurrentProfile / ThumbMouseSettings).
+        // Orientation is a property of the hardware and is shared by all profiles.
 
         public int NubMouseRotation
         {
@@ -167,40 +122,62 @@ namespace X52.CustomDriver.App.ViewModels
 
         public void ShutdownNubMouse() => _nubMouse.Dispose();
 
-        public double SensitivityX
-        {
-            get => CurrentProfile.AxisSettings.SensitivityX;
-            set
-            {
-                CurrentProfile.AxisSettings.SensitivityX = value;
-                OnPropertyChanged();
-                _profileService.SaveProfiles();
-            }
-        }
-
-        public double SensitivityY
-        {
-            get => CurrentProfile.AxisSettings.SensitivityY;
-            set
-            {
-                CurrentProfile.AxisSettings.SensitivityY = value;
-                OnPropertyChanged();
-                _profileService.SaveProfiles();
-            }
-        }
-
         public X52Profile CurrentProfile
         {
             get => _currentProfile;
-            set 
-            { 
-                _currentProfile = value; 
-                OnPropertyChanged(); 
+            set
+            {
+                _currentProfile = value;
+                WatchMouse(EnsureMouseSettings(value));
+                OnPropertyChanged();
                 OnPropertyChanged(nameof(ProfileName));
-                OnPropertyChanged(nameof(SensitivityX));
-                OnPropertyChanged(nameof(SensitivityY));
+                OnPropertyChanged(nameof(NubMouseStatus));
             }
         }
+
+        /// <summary>
+        /// Profiles saved before v1.2.0 have no thumb stick settings: give them the
+        /// (then global) values from settings.json so nothing changes for the user.
+        /// </summary>
+        public ThumbMouseSettings EnsureMouseSettings(X52Profile profile)
+        {
+            if (profile.Mouse == null)
+            {
+                var cfg = _settingsService.CurrentSettings;
+                profile.Mouse = new ThumbMouseSettings
+                {
+                    Enabled = cfg.NubMouseEnabled,
+                    Buttons = cfg.NubMouseButtons,
+                    Speed = cfg.NubMouseSpeed,
+                    Deadzone = cfg.NubMouseDeadzone
+                };
+            }
+            return profile.Mouse;
+        }
+
+        private ThumbMouseSettings? _watchedMouse;
+
+        // The mouse service always follows the active profile; refresh the LIVE status when it changes
+        private void WatchMouse(ThumbMouseSettings settings)
+        {
+            if (_watchedMouse != null) _watchedMouse.PropertyChanged -= WatchedMouse_PropertyChanged;
+            _watchedMouse = settings;
+            _watchedMouse.PropertyChanged += WatchedMouse_PropertyChanged;
+            _nubMouse.Settings = settings;
+        }
+
+        private void WatchedMouse_PropertyChanged(object? sender, PropertyChangedEventArgs e) => OnPropertyChanged(nameof(NubMouseStatus));
+
+        /// <summary>Ctrl+Alt+M: switch the thumb stick mouse of the active profile on/off.</summary>
+        public void ToggleNubMouse()
+        {
+            var m = EnsureMouseSettings(CurrentProfile);
+            m.Enabled = !m.Enabled;
+            _profileService.SaveProfiles();
+            OnPropertyChanged(nameof(NubMouseStatus));
+        }
+
+        public string NubMouseStatus => EnsureMouseSettings(CurrentProfile).Enabled ? "ON" : "OFF";
 
         public string ProfileName => CurrentProfile.Name;
 
@@ -227,14 +204,17 @@ namespace X52.CustomDriver.App.ViewModels
 
             InitializeButtons();
 
-            // Edit the real active profile (not a throwaway copy), so curves and mappings are saved
+            // Work on the real active profile (not a throwaway copy), so edits are saved
             _currentProfile = _profileService.ActiveProfile;
 
+            // Migrate pre-1.2.0 global thumb stick settings into every profile
+            bool migrated = false;
+            foreach (var p in _profileService.Profiles)
+                if (p.Mouse == null) { EnsureMouseSettings(p); migrated = true; }
+            if (migrated) _profileService.SaveProfiles();
+            WatchMouse(EnsureMouseSettings(_currentProfile));
+
             var cfg = _settingsService.CurrentSettings;
-            _nubMouse.Enabled = cfg.NubMouseEnabled;
-            _nubMouse.ButtonsEnabled = cfg.NubMouseButtons;
-            _nubMouse.Speed = cfg.NubMouseSpeed;
-            _nubMouse.Deadzone = cfg.NubMouseDeadzone;
             _nubMouse.Rotation = cfg.NubMouseRotation;
             _nubMouse.InvertX = cfg.NubMouseInvertX;
             _nubMouse.InvertY = cfg.NubMouseInvertY;

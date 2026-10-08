@@ -99,6 +99,7 @@ namespace X52.CustomDriver.App
         {
             _hidService?.StopListening();
             _viewModel?.ShutdownNubMouse();
+            _profileService?.SaveProfiles();
             _vJoyService?.Shutdown();
             _notifyIcon?.Dispose();
             base.OnExit(e);

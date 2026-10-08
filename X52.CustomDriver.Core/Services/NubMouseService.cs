@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
+using X52.CustomDriver.Core.Models;
 
 namespace X52.CustomDriver.Core.Services
 {
@@ -25,13 +26,13 @@ namespace X52.CustomDriver.Core.Services
         // Safety net: if no report arrives for this long, stop moving the cursor
         private const double StaleSeconds = 4.0;
 
-        // Settings (read on every tick, so changes apply immediately)
-        public volatile bool Enabled = true;
-        public volatile bool ButtonsEnabled = true;
-        private double _speed = 1200;     // pixels per second at full deflection
-        private double _deadzone = 1.0;   // in nub units (0..8)
-        public double Speed { get => Volatile.Read(ref _speed); set => Volatile.Write(ref _speed, Math.Clamp(value, 50, 6000)); }
-        public double Deadzone { get => Volatile.Read(ref _deadzone); set => Volatile.Write(ref _deadzone, Math.Clamp(value, 0, 4)); }
+        // Settings of the active profile (read on every tick, so edits apply immediately)
+        private volatile ThumbMouseSettings _settings = new();
+        public ThumbMouseSettings Settings { get => _settings; set => _settings = value ?? new ThumbMouseSettings(); }
+        private bool Enabled => _settings.Enabled;
+        private bool ButtonsEnabled => _settings.Buttons;
+        private double Speed => Math.Clamp(_settings.Speed, 50, 6000);
+        private double Deadzone => Math.Clamp(_settings.Deadzone, 0, 4);
 
         // Orientation fix: rotate movement clockwise by 0/90/180/270 degrees, then mirror
         private volatile int _rotation;

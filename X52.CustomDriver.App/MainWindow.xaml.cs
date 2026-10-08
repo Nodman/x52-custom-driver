@@ -21,6 +21,7 @@ namespace X52.CustomDriver.App
         {
             InitializeComponent();
             DataContext = viewModel;
+            ProfilesTab.Initialize(viewModel);
 
             // Create the window handle now so the hotkey works even while the window is hidden in the tray
             var handle = new WindowInteropHelper(this).EnsureHandle();
@@ -38,7 +39,7 @@ namespace X52.CustomDriver.App
         {
             if (msg == WM_HOTKEY && wParam.ToInt32() == HotkeyId && DataContext is X52ViewModel vm)
             {
-                vm.NubMouseEnabled = !vm.NubMouseEnabled;
+                vm.ToggleNubMouse();
                 handled = true;
             }
             return IntPtr.Zero;
@@ -84,24 +85,5 @@ namespace X52.CustomDriver.App
             if (DataContext is X52ViewModel vm) vm.RotateNubMouse();
         }
 
-        private void EditCurves_Click(object sender, RoutedEventArgs e)
-        {
-            if (DataContext is X52ViewModel vm)
-            {
-                var editor = new CurveEditorWindow(vm);
-                editor.Owner = this;
-                editor.Show();
-            }
-        }
-
-        private void EditMappings_Click(object sender, RoutedEventArgs e)
-        {
-            if (DataContext is X52ViewModel vm)
-            {
-                var editor = new MappingEditorWindow(vm);
-                editor.Owner = this;
-                editor.ShowDialog();
-            }
-        }
     }
 }

@@ -9,7 +9,9 @@ namespace X52.CustomDriver.Core.Models
         public bool RunAtStartup { get; set; } = false;
         public bool UpgradeRequired { get; set; } = true;
 
-        // Throttle thumb stick ("mouse nub") -> Windows mouse
+        // Thumb stick orientation (a property of the hardware, shared by all profiles)
+        // NubMouseEnabled/Buttons/Speed/Deadzone are now per profile; these copies are only read
+        // once to migrate settings from v1.1.9 into existing profiles.
         public bool NubMouseEnabled { get; set; } = true;
         public bool NubMouseButtons { get; set; } = true;
         public double NubMouseSpeed { get; set; } = 1200;

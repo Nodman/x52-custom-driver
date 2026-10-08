@@ -1,15 +1,52 @@
 using System;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Collections.Generic;
 
 namespace X52.CustomDriver.Core.Models
 {
-    public class X52Profile
+    public class X52Profile : INotifyPropertyChanged
     {
-        public string Name { get; set; } = "Default";
-        public string? ProcessName { get; set; } // e.g. "DCS", "FlightSimulator"
+        private string _name = "Default";
+        private string? _processName;
+
+        public string Name
+        {
+            get => _name;
+            set { _name = value; OnPropertyChanged(nameof(Name)); }
+        }
+
+        public string? ProcessName // e.g. "DCS", "FlightSimulator" (with or without .exe)
+        {
+            get => _processName;
+            set { _processName = value; OnPropertyChanged(nameof(ProcessName)); }
+        }
+
         public ObservableCollection<ButtonMapping> Mappings { get; set; } = new();
         public AxisSettings AxisSettings { get; set; } = new();
+
+        // Null in profiles saved by older versions; filled in on load
+        public ThumbMouseSettings? Mouse { get; set; }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+        private void OnPropertyChanged(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    }
+
+    /// <summary>Thumb stick ("mouse nub") behaviour for one profile.</summary>
+    public class ThumbMouseSettings : INotifyPropertyChanged
+    {
+        private bool _enabled = true;
+        private bool _buttons = true;
+        private double _speed = 1200;
+        private double _deadzone = 1.0;
+
+        public bool Enabled { get => _enabled; set { _enabled = value; OnPropertyChanged(nameof(Enabled)); } }
+        public bool Buttons { get => _buttons; set { _buttons = value; OnPropertyChanged(nameof(Buttons)); } }
+        public double Speed { get => _speed; set { _speed = value; OnPropertyChanged(nameof(Speed)); } }       // px/s at full deflection
+        public double Deadzone { get => _deadzone; set { _deadzone = value; OnPropertyChanged(nameof(Deadzone)); } } // 0..4 nub units
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+        private void OnPropertyChanged(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 
     public class ButtonMapping

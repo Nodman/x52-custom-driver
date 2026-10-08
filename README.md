@@ -22,6 +22,12 @@ A modern, high-performance, and open-source driver for the **Logitech/Saitek X52
   - ~6MB installer compared to the hundreds of MBs of the original software.
   - Easy installation and uninstallation with custom "Æ52" branding.
 
+## 🗂️ Profiles (v1.2.0)
+
+The window now has three tabs: **LIVE** (axes, buttons, status), **PROFILES** and **SETTINGS**.
+Each profile has its own button mappings, axis curves (deadzone, curvature, saturation, invert for stick X/Y and twist) and thumb stick mouse settings,
+and switches on automatically when its game .exe is running. Everything is saved automatically.
+
 ## 🖱️ Thumb Stick Mouse (v1.1.9)
 
 The small rubber thumb stick on the throttle now works as a real Windows mouse, like it did with the original Saitek driver:

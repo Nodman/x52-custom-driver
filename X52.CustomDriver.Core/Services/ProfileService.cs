@@ -105,6 +105,26 @@ namespace X52.CustomDriver.Core.Services
             }
         }
 
+        // "DCS.exe", " dcs " and "DCS" all match the DCS process
+        private static string NormalizeProcessName(string name)
+        {
+            name = name.Trim();
+            return name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? name[..^4] : name;
+        }
+
+        /// <summary>Deep copy (via JSON) for "duplicate profile".</summary>
+        public X52Profile Duplicate(X52Profile source)
+        {
+            var copy = JsonSerializer.Deserialize<X52Profile>(JsonSerializer.Serialize(source)) ?? new X52Profile();
+            string baseName = source.Name + " copy";
+            string name = baseName;
+            for (int i = 2; _profiles.Any(p => p.Name == name); i++) name = $"{baseName} {i}";
+            copy.Name = name;
+            copy.ProcessName = null;
+            AddProfile(copy);
+            return copy;
+        }
+
         public void StartWatcher()
         {
             _ccts = new CancellationTokenSource();
@@ -121,9 +141,9 @@ namespace X52.CustomDriver.Core.Services
                 {
                     var runningProcesses = Process.GetProcesses().Select(p => p.ProcessName).ToList();
                     
-                    var matchedProfile = _profiles.FirstOrDefault(p => 
-                        !string.IsNullOrEmpty(p.ProcessName) && 
-                        runningProcesses.Contains(p.ProcessName, StringComparer.OrdinalIgnoreCase));
+                    var matchedProfile = _profiles.FirstOrDefault(p =>
+                        !string.IsNullOrWhiteSpace(p.ProcessName) &&
+                        runningProcesses.Contains(NormalizeProcessName(p.ProcessName), StringComparer.OrdinalIgnoreCase));
 
                     var targetProfile = matchedProfile ?? _profiles.First(p => p.Name == "Default");
 

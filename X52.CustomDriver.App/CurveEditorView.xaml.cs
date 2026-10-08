@@ -10,36 +10,55 @@ using X52.CustomDriver.Core.Models;
 
 namespace X52.CustomDriver.App
 {
-    public partial class CurveEditorWindow : Window
+    public partial class CurveEditorView : System.Windows.Controls.UserControl
     {
         private const double Size = 320;
 
-        private readonly X52ViewModel? _vm;
+        private X52ViewModel? _vm;
         private string _axis = "X";
         private bool _loading;
 
         private readonly Polyline _curveLine = new() { Stroke = Brush("#00D2FF"), StrokeThickness = 2 };
         private readonly Ellipse _dot = new() { Width = 12, Height = 12, Fill = Brush("#FF0055") };
-        private readonly DispatcherTimer _saveTimer = new() { Interval = TimeSpan.FromMilliseconds(500) };
 
-        public CurveEditorWindow(X52ViewModel vm)
+        private X52Profile? _profile;
+
+        public CurveEditorView()
         {
             InitializeComponent();
-            _vm = vm;
-
             DrawGrid();
             GraphCanvas.Children.Add(_curveLine);
             GraphCanvas.Children.Add(_dot);
+            Unloaded += (s, e) => { if (_vm != null) _vm.PropertyChanged -= Vm_PropertyChanged; };
+            Loaded += (s, e) => { if (_vm != null) { _vm.PropertyChanged -= Vm_PropertyChanged; _vm.PropertyChanged += Vm_PropertyChanged; } };
+        }
 
-            _saveTimer.Tick += (s, e) => { _saveTimer.Stop(); _vm.SaveProfiles(); };
+        public void Initialize(X52ViewModel vm)
+        {
+            _vm = vm;
             _vm.PropertyChanged += Vm_PropertyChanged;
-            Closed += (s, e) =>
-            {
-                _vm.PropertyChanged -= Vm_PropertyChanged;
-                if (_saveTimer.IsEnabled) { _saveTimer.Stop(); _vm.SaveProfiles(); }
-            };
+        }
 
-            LoadAxis();
+        /// <summary>Show and edit the curves of this profile.</summary>
+        public void SetProfile(X52Profile? profile)
+        {
+            _profile = profile;
+            IsEnabled = profile != null;
+            if (profile != null) LoadAxis();
+        }
+
+        private AxisCurve Curve
+        {
+            get
+            {
+                var a = _profile!.AxisSettings;
+                switch (_axis)
+                {
+                    case "Y": return a.CurveY ??= new AxisCurve();
+                    case "Twist": return a.CurveTwist ??= new AxisCurve();
+                    default: return a.CurveX ??= new AxisCurve();
+                }
+            }
         }
 
         private static SolidColorBrush Brush(string hex) => (SolidColorBrush)new BrushConverter().ConvertFromString(hex)!;
@@ -69,8 +88,8 @@ namespace X52.CustomDriver.App
 
         private void RedrawCurve()
         {
-            if (_vm == null) return;
-            var curve = _vm.GetCurve(_axis);
+            if (_profile == null) return;
+            var curve = Curve;
             var points = new PointCollection();
             for (int i = 0; i <= 200; i++)
             {
@@ -83,9 +102,9 @@ namespace X52.CustomDriver.App
 
         private void UpdateDot()
         {
-            if (_vm == null) return;
+            if (_vm == null || _profile == null) return;
             double input = _vm.GetLiveInput(_axis);
-            double output = _vm.GetCurve(_axis).Apply(input);
+            double output = Curve.Apply(input);
             Canvas.SetLeft(_dot, ToX(input) - _dot.Width / 2);
             Canvas.SetTop(_dot, ToY(output) - _dot.Height / 2);
             LiveText.Text = $"in {input * 100,4:0}%  →  out {output * 100,4:0}%";
@@ -95,9 +114,9 @@ namespace X52.CustomDriver.App
 
         private void LoadAxis()
         {
-            if (_vm == null) return;
+            if (_profile == null) return;
             _loading = true;
-            var c = _vm.GetCurve(_axis);
+            var c = Curve;
             DeadzoneSlider.Value = c.Deadzone * 100;
             CurvatureSlider.Value = c.Curvature * 100;
             SatXSlider.Value = c.SaturationX * 100;
@@ -105,7 +124,6 @@ namespace X52.CustomDriver.App
             InvertBox.IsChecked = c.Invert;
             _loading = false;
 
-            ProfileText.Text = $"PROFILE: {_vm.ProfileName}";
             foreach (var b in new[] { AxisXButton, AxisYButton, AxisTwistButton })
             {
                 bool selected = (string)b.Tag == _axis;
@@ -117,24 +135,21 @@ namespace X52.CustomDriver.App
 
         private void ApplyFromUi()
         {
-            if (_vm == null || _loading) return;
-            var c = _vm.GetCurve(_axis);
+            if (_profile == null || _loading) return;
+            var c = Curve;
             c.Deadzone = DeadzoneSlider.Value / 100.0;
             c.Curvature = CurvatureSlider.Value / 100.0;
             c.SaturationX = SatXSlider.Value / 100.0;
             c.SaturationY = SatYSlider.Value / 100.0;
             c.Invert = InvertBox.IsChecked == true;
             RedrawCurve();
-            _saveTimer.Stop();
-            _saveTimer.Start();
         }
 
         // --- Events ---
 
         private void Vm_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == nameof(X52ViewModel.State)) UpdateDot();
-            else if (e.PropertyName == nameof(X52ViewModel.CurrentProfile)) LoadAxis();
+            if (e.PropertyName == nameof(X52ViewModel.State) && IsVisible) UpdateDot();
         }
 
         private void Axis_Click(object sender, RoutedEventArgs e)
@@ -152,11 +167,9 @@ namespace X52.CustomDriver.App
 
         private void Reset_Click(object sender, RoutedEventArgs e)
         {
-            if (_vm == null) return;
-            _vm.GetCurve(_axis).Reset();
-            LoadAxis();
-            _saveTimer.Stop();
-            _saveTimer.Start();
+            if (_profile == null) return;
+            Curve.Reset();
+            LoadAxis(); // slider changes bubble up to the profile view, which saves
         }
     }
 }
