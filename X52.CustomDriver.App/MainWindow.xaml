@@ -284,7 +284,8 @@
                 <TextBlock Text="THUMB STICK MOUSE" FontWeight="Bold" Margin="0,30,0,10" Foreground="#555"/>
                 <Border Background="#111" CornerRadius="10" Padding="15">
                     <StackPanel>
-                        <CheckBox IsChecked="{Binding NubMouseEnabled}" Content="Thumb stick moves the cursor" Style="{StaticResource NeonCheckBox}" Margin="0,0,0,10"/>
+                        <CheckBox IsChecked="{Binding NubMouseEnabled}" Content="Thumb stick moves the cursor (Ctrl+Alt+M)" Style="{StaticResource NeonCheckBox}" Margin="0,0,0,10"
+                                  ToolTip="Ctrl+Alt+M switches the thumb stick mouse on/off from anywhere, even when this window is hidden"/>
                         <CheckBox IsChecked="{Binding NubMouseButtons}" Content="Mouse buttons and scroll" Style="{StaticResource NeonCheckBox}" Margin="0,0,0,15"
                                   ToolTip="Throttle mouse button = left click, wheel press = middle click, scroll = wheel"/>
                         <DockPanel Margin="0,0,0,15">

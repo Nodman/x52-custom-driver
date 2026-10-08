@@ -32,38 +32,60 @@ namespace X52.CustomDriver.Core.Services
 
         public event EventHandler<X52State>? OnStateChanged;
         public event EventHandler<string>? OnError;
+        public event EventHandler? OnDisconnected;
 
         public void Initialize()
         {
-            _device = HidDevices.Enumerate(VID, PID_Pro).FirstOrDefault();
-            if (_device != null) _currentPid = PID_Pro;
-            else
-            {
-                _device = HidDevices.Enumerate(VID, PID_Std).FirstOrDefault();
-                if (_device != null) _currentPid = PID_Std;
-            }
+            if (!TryOpenDevice(out string? error))
+                OnError?.Invoke(this, error ?? "X52 Device not found.");
+        }
 
-            if (_device == null)
+        private bool TryOpenDevice(out string? error)
+        {
+            error = null;
+            var device = HidDevices.Enumerate(VID, PID_Pro).FirstOrDefault()
+                      ?? HidDevices.Enumerate(VID, PID_Std).FirstOrDefault();
+            if (device == null)
             {
-                OnError?.Invoke(this, "X52 Device not found.");
-                return;
+                error = "X52 Device not found.";
+                return false;
             }
 
             try
             {
-                _device.OpenDevice();
-                _currentPid = _device.Attributes.ProductId;
+                device.OpenDevice();
+                _currentPid = device.Attributes.ProductId;
+                _device = device;
                 InitializeLeds();
+                return true;
             }
             catch (Exception ex)
             {
-                OnError?.Invoke(this, $"Failed to open device: {ex.Message}");
+                error = $"Failed to open device: {ex.Message}";
+                return false;
             }
+        }
+
+        private void HandleDisconnect()
+        {
+            var device = _device;
+            _device = null;
+            try { device?.CloseDevice(); } catch { }
+            OnDisconnected?.Invoke(this, EventArgs.Empty);
+        }
+
+        // A real X52 report is never all zeros. HidLibrary hands back a zero-filled
+        // buffer with "Success" when the device is unplugged mid-read.
+        private static bool IsValidReport(byte[]? d)
+        {
+            if (d == null || d.Length < 14) return false;
+            foreach (byte b in d) if (b != 0) return true;
+            return false;
         }
 
         public void StartListening()
         {
-            if (_device == null) return;
+            // Runs even when no stick is plugged in yet: the read loop connects when it appears.
             _ccts = new CancellationTokenSource();
             _readTask = Task.Run(() => ReadLoop(_ccts.Token), _ccts.Token);
             _ = Task.Run(() => MfdRefreshLoop(_ccts.Token), _ccts.Token);
@@ -86,18 +108,54 @@ namespace X52.CustomDriver.Core.Services
 
         private void ReadLoop(CancellationToken token)
         {
-            while (!token.IsCancellationRequested && IsConnected)
+            var lastPresenceCheck = DateTime.UtcNow;
+            while (!token.IsCancellationRequested)
             {
+                var device = _device;
+                if (device == null || !device.IsOpen)
+                {
+                    // Not connected: look for the stick again every second
+                    if (!TryOpenDevice(out _))
+                    {
+                        try { Task.Delay(1000, token).Wait(token); } catch { break; }
+                    }
+                    continue;
+                }
+
                 try
                 {
-                    var report = _device?.ReadReport(100); 
-                    if (report != null && report.ReadStatus == HidDeviceData.ReadStatus.Success)
+                    var report = device.ReadReport(100);
+                    var status = report?.ReadStatus ?? HidDeviceData.ReadStatus.ReadError;
+
+                    if (status == HidDeviceData.ReadStatus.Success && IsValidReport(report!.Data))
                     {
                         var state = ParseReport(report.Data);
                         OnStateChanged?.Invoke(this, state);
+                        continue;
                     }
+
+                    // Anything other than a good report: make sure the stick is still there.
+                    // (Timeouts are normal while idle, so only check those once a second.)
+                    bool check = status != HidDeviceData.ReadStatus.WaitTimedOut
+                              || (DateTime.UtcNow - lastPresenceCheck).TotalSeconds >= 1;
+                    if (check)
+                    {
+                        lastPresenceCheck = DateTime.UtcNow;
+                        if (!device.IsConnected)
+                        {
+                            HandleDisconnect();
+                            continue;
+                        }
+                    }
+                    if (status != HidDeviceData.ReadStatus.Success && status != HidDeviceData.ReadStatus.WaitTimedOut)
+                        Thread.Sleep(50); // don't spin on repeated read errors
                 }
-                catch (Exception ex) { OnError?.Invoke(this, $"Read Error: {ex.Message}"); }
+                catch (Exception ex)
+                {
+                    OnError?.Invoke(this, $"Read Error: {ex.Message}");
+                    try { if (!device.IsConnected) HandleDisconnect(); } catch { }
+                    Thread.Sleep(50);
+                }
             }
         }
 

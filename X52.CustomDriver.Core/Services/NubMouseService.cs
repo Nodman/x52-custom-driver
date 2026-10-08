@@ -22,6 +22,8 @@ namespace X52.CustomDriver.Core.Services
         private const int PID_Pro = 0x0762;
         private const double NubMax = 8.0;
         private const int TickMs = 10;
+        // Safety net: if no report arrives for this long, stop moving the cursor
+        private const double StaleSeconds = 4.0;
 
         // Settings (read on every tick, so changes apply immediately)
         public volatile bool Enabled = true;
@@ -41,6 +43,7 @@ namespace X52.CustomDriver.Core.Services
         private volatile int _dx;
         private volatile int _dy;
         private volatile bool _hasData;
+        private long _lastReportTicks;
 
         // Last values seen, for live display in the UI
         public int RawX => _dx;
@@ -63,6 +66,12 @@ namespace X52.CustomDriver.Core.Services
         {
             if (data == null) return;
 
+            // Never act on an all-zero buffer: that is what a read returns when the stick is unplugged,
+            // and it would decode as "thumb stick fully deflected".
+            bool any = false;
+            foreach (byte b in data) if (b != 0) { any = true; break; }
+            if (!any) return;
+
             bool isPro = productId == PID_Pro;
             int thumbIndex = isPro ? 14 : 13;
             if (data.Length <= thumbIndex) return;
@@ -71,6 +80,7 @@ namespace X52.CustomDriver.Core.Services
             _dx = (thumb & 0x0F) - 8;
             _dy = (thumb >> 4) - 8;
             _hasData = true;
+            Interlocked.Exchange(ref _lastReportTicks, Stopwatch.GetTimestamp());
 
             ulong buttons = 0;
             for (int i = 0; i < 5 && 8 + i < data.Length; i++)
@@ -126,6 +136,19 @@ namespace X52.CustomDriver.Core.Services
             }
         }
 
+        /// <summary>Stick unplugged or input invalid: stop the cursor and let go of any held buttons.</summary>
+        public void Reset()
+        {
+            _hasData = false;
+            _dx = 0;
+            _dy = 0;
+            lock (_buttonLock)
+            {
+                ReleaseButtons();
+                _scrollUpPrev = _scrollDownPrev = false;
+            }
+        }
+
         private void ReleaseButtons()
         {
             if (_leftDown) { SendMouse(0, 0, 0, MOUSEEVENTF_LEFTUP); _leftDown = false; }
@@ -149,6 +172,13 @@ namespace X52.CustomDriver.Core.Services
                 {
                     accX = accY = 0;
                     if (!Enabled) lock (_buttonLock) ReleaseButtons();
+                    continue;
+                }
+
+                double age = (double)(Stopwatch.GetTimestamp() - Interlocked.Read(ref _lastReportTicks)) / Stopwatch.Frequency;
+                if (age > StaleSeconds)
+                {
+                    accX = accY = 0;
                     continue;
                 }
 

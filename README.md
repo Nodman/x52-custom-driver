@@ -28,7 +28,8 @@ The small rubber thumb stick on the throttle now works as a real Windows mouse, 
 
 - Thumb stick moves the cursor (adjustable speed and deadzone)
 - Throttle mouse button = left click, wheel press = middle click, scroll wheel = mouse wheel
-- Can be switched off in the **THUMB STICK MOUSE** panel if you want it out of the way in game
+- Can be switched off in the **THUMB STICK MOUSE** panel, or from anywhere with **Ctrl+Alt+M**
+- Unplugging the stick stops the cursor and releases buttons; the driver reconnects automatically when it is plugged back in
 - Raise the deadzone if a worn thumb stick makes the cursor drift on its own
 
 ## 🛠️ Requirements

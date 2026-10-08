@@ -227,6 +227,9 @@ namespace X52.CustomDriver.App.ViewModels
 
             InitializeButtons();
 
+            // Edit the real active profile (not a throwaway copy), so curves and mappings are saved
+            _currentProfile = _profileService.ActiveProfile;
+
             var cfg = _settingsService.CurrentSettings;
             _nubMouse.Enabled = cfg.NubMouseEnabled;
             _nubMouse.ButtonsEnabled = cfg.NubMouseButtons;
@@ -242,6 +245,21 @@ namespace X52.CustomDriver.App.ViewModels
                 {
                     CurrentProfile = p;
                 });
+            };
+
+            _hidService.OnDisconnected += (s, e) =>
+            {
+                // Stop the cursor immediately and leave the game with a centred, idle stick
+                _nubMouse.Reset();
+                var last = _state;
+                UpdateVJoy(new X52State
+                {
+                    X = 1024, Y = 1024, Z = 512,
+                    Throttle = last.Throttle, Rotary1 = last.Rotary1, Rotary2 = last.Rotary2, Slider = last.Slider,
+                    CurrentMode = last.CurrentMode,
+                    RawData = new byte[Math.Max(last.RawData?.Length ?? 0, 14)]
+                });
+                System.Windows.Application.Current?.Dispatcher.BeginInvoke(new Action(() => OnPropertyChanged(nameof(IsConnected))));
             };
 
             _hidService.OnStateChanged += (s, e) =>

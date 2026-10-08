@@ -20,5 +20,8 @@ namespace X52.CustomDriver.Core.Interfaces
         
         event EventHandler<X52State> OnStateChanged;
         event EventHandler<string> OnError;
+
+        // Raised when the stick is unplugged (the driver reconnects on its own when it comes back)
+        event EventHandler? OnDisconnected;
     }
 }

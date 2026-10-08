@@ -43,10 +43,8 @@ namespace X52.CustomDriver.App
                 _profileService.StartWatcher();
                 
                 System.IO.File.AppendAllText(logPath, "Hardware Connected. Starting Listener...\n");
-                if (_hidService.IsConnected)
-                {
-                    _hidService.StartListening();
-                }
+                // Always listen: the HID service connects (and reconnects) by itself when the stick is plugged in
+                _hidService.StartListening();
 
                 System.IO.File.AppendAllText(logPath, "Setup Tray Icon...\n");
                 _notifyIcon = new NotifyIcon();
