@@ -110,7 +110,7 @@ namespace X52.CustomDriver.App
             {
                 bool selected = (string)b.Tag == _axis;
                 b.Background = selected ? Brush("#00D2FF") : Brush("#222");
-                b.Foreground = selected ? Brushes.Black : Brush("#00D2FF");
+                b.Foreground = selected ? System.Windows.Media.Brushes.Black : Brush("#00D2FF");
             }
             RedrawCurve();
         }
