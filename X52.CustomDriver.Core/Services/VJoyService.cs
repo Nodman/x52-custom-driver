@@ -60,6 +60,19 @@ namespace X52.CustomDriver.Core.Services
             catch (Exception ex) { Console.WriteLine($"[VJoyService] SetPov failed: {ex.Message}"); }
         }
 
+        // The vJoy installer clears the device name; put "Ærakon X52 Virtual Joystick" back if it's missing
+        private const string OemKey = @"System\CurrentControlSet\Control\MediaProperties\PrivateProperties\Joystick\OEM\VID_1234&PID_BEAD";
+        private static void EnsureBrandName()
+        {
+            try
+            {
+                using var key = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(OemKey);
+                if (string.IsNullOrEmpty(key?.GetValue("OEMName") as string))
+                    key?.SetValue("OEMName", "Ærakon X52 Virtual Joystick");
+            }
+            catch { /* cosmetic only */ }
+        }
+
         private void ReadCapabilities()
         {
             try
@@ -156,6 +169,7 @@ namespace X52.CustomDriver.Core.Services
                                      CacheMethods();
                                      Reset();
                                      ReadCapabilities();
+                                     EnsureBrandName();
                                      IsAvailable = true;
                                      Console.WriteLine($"[VJoyService] Device {DeviceId} Acquired.");
                                      return true;
