@@ -313,7 +313,8 @@ namespace X52.CustomDriver.App
             {
                 choices.Add(new ChoiceDialog.Choice($"USE A SEPARATE DEVICE (#{free})",
                     $"Create vJoy device #{free} just for the X52. Device #{current} stays as it is. " +
-                    "Games see the X52 as a new controller, so bind it once in each game.",
+                    "Games see the X52 as a new controller, so bind it once in each game. Windows gives all vJoy " +
+                    "devices one shared name, so both will be listed as \"vJoy Device\" (the LIVE tab shows which number is the X52).",
                     IsDefault: busy));
                 devices.Add(free);
             }

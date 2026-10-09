@@ -80,19 +80,32 @@ namespace X52.CustomDriver.Core.Services
             catch (Exception ex) { Console.WriteLine($"[VJoyService] SetPov failed: {ex.Message}"); }
         }
 
-        // Name shown in Game Controllers and games. Windows keeps one name for VID 1234 / PID BEAD,
-        // so it applies to every vJoy device. Installing or reconfiguring vJoy (vJoyConfig) makes
-        // Windows rebuild the entry, either empty or as the default "vJoy Device": put ours back then.
+        // Name shown in Game Controllers and games. All vJoy devices share VID 1234 / PID BEAD and the
+        // same HID strings, so Windows keeps ONE name for all of them; a single device can't be renamed.
+        // So the X52 name is only used while the X52's device is the only vJoy device. With other vJoy
+        // devices (maybe used by another program) every entry keeps vJoy's own "vJoy Device".
+        // Installing or reconfiguring vJoy makes Windows reset the entry, so this runs after setup and
+        // on every start.
         public const string BrandName = "Ærakon X52 Virtual Joystick";
+        private const string DefaultName = "vJoy Device";
         private const string OemKey = @"System\CurrentControlSet\Control\MediaProperties\PrivateProperties\Joystick\OEM\VID_1234&PID_BEAD";
         public void EnsureBrandName()
         {
             try
             {
+                if (!IsAvailable) return;
+                bool otherDevices = false;
+                for (uint id = 1; id <= 16 && !otherDevices; id++)
+                    if (id != DeviceId && QueryDeviceStatus(id) is StatusFree or StatusBusy or StatusOwn)
+                        otherDevices = true;
+
                 using var key = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(OemKey);
-                string? current = key?.GetValue("OEMName") as string;
-                if (string.IsNullOrEmpty(current) || current.Trim().Equals("vJoy Device", StringComparison.OrdinalIgnoreCase))
+                string current = (key?.GetValue("OEMName") as string ?? "").Trim();
+                bool isDefault = current.Length == 0 || current.Equals(DefaultName, StringComparison.OrdinalIgnoreCase);
+                if (!otherDevices && isDefault)
                     key?.SetValue("OEMName", BrandName);
+                else if (otherDevices && current == BrandName)
+                    key?.SetValue("OEMName", DefaultName); // don't put the X52's name on someone else's device
             }
             catch { /* cosmetic only */ }
         }
@@ -123,7 +136,7 @@ namespace X52.CustomDriver.Core.Services
                     // vJoy VID/PID is 1234/BEAD. Windows stores the name in the registry.
                     using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"System\CurrentControlSet\Control\MediaProperties\PrivateProperties\Joystick\OEM\VID_1234&PID_BEAD");
                     var name = key?.GetValue("OEMName") as string;
-                    if (!string.IsNullOrEmpty(name)) return $"{name}  (vJoy device #{DeviceId})";
+                    if (name == BrandName) return $"{name}  (vJoy device #{DeviceId})";
                 }
                 catch { }
                 return $"vJoy device #{DeviceId}";
@@ -193,8 +206,8 @@ namespace X52.CustomDriver.Core.Services
                                      CacheMethods();
                                      Reset();
                                      ReadCapabilities();
-                                     EnsureBrandName();
                                      IsAvailable = true;
+                                     EnsureBrandName();
                                      Console.WriteLine($"[VJoyService] Device {DeviceId} Acquired.");
                                      return true;
                                  }

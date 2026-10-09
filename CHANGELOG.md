@@ -2,6 +2,11 @@
 
 Each `## vX.Y.Z` section below becomes the notes of the GitHub Release with that tag.
 
+## v1.4.9
+
+### Fixes
+- **vJoy name only when it's the X52's alone**: Windows keeps one name for all vJoy devices (they share one hardware ID), so a single vJoy device can't be renamed. "Ærakon X52 Virtual Joystick" is now only used while the X52's device is the only vJoy device. With other vJoy devices (e.g. one another program uses), every entry keeps vJoy's own "vJoy Device", and v1.4.8's name is taken back off. The LIVE tab shows which vJoy device number the X52 uses.
+
 ## v1.4.8
 
 ### Fixes
