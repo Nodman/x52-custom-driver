@@ -25,16 +25,26 @@ namespace X52.CustomDriver.Core.Services
         public IReadOnlyList<X52Profile> Profiles => _profiles;
         public X52Profile ActiveProfile => _activeProfile;
 
+        /// <summary>Set when the profiles file had to be recovered at startup (shown to the user).</summary>
+        public string? LoadNotice { get; private set; }
+
         public ProfileService()
         {
             _profilesPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "profiles.json");
             LoadProfiles();
-            
+
             if (!_profiles.Any())
             {
                 CreateDefaultProfiles();
             }
-            
+            else if (!_profiles.Any(p => p.Name == "Default"))
+            {
+                // "Default" is the fallback when no game matches; recreate it instead of failing to start
+                _profiles.Insert(0, new X52Profile { Name = "Default" });
+                LoadNotice = (LoadNotice == null ? "" : LoadNotice + " ") + "The \"Default\" profile was missing and has been recreated.";
+                SaveProfiles();
+            }
+
             _activeProfile = _profiles.First(p => p.Name == "Default");
             _lastAutoTarget = _activeProfile;
         }
@@ -55,16 +65,11 @@ namespace X52.CustomDriver.Core.Services
 
         private void LoadProfiles()
         {
-            try
-            {
-                if (File.Exists(_profilesPath))
-                {
-                    string json = File.ReadAllText(_profilesPath);
-                    _profiles = JsonSerializer.Deserialize<List<X52Profile>>(json) ?? new List<X52Profile>();
-                    MigrateLoadedProfiles();
-                }
-            }
-            catch { _profiles = new List<X52Profile>(); }
+            // Never overwrites a damaged file: it is kept aside and the .bak copy is used instead
+            var (loaded, notice) = SafeJsonFile.Load<List<X52Profile>>(_profilesPath, "The profiles");
+            _profiles = loaded ?? new List<X52Profile>();
+            LoadNotice = notice;
+            MigrateLoadedProfiles();
         }
 
         /// <summary>
@@ -83,8 +88,7 @@ namespace X52.CustomDriver.Core.Services
         {
             try
             {
-                string json = JsonSerializer.Serialize(_profiles, new JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(_profilesPath, json);
+                SafeJsonFile.Save(_profilesPath, _profiles);
             }
             catch (Exception ex) { Console.WriteLine($"[ERROR] Failed to save profiles: {ex.Message}"); }
         }
@@ -222,7 +226,7 @@ namespace X52.CustomDriver.Core.Services
                         !string.IsNullOrWhiteSpace(p.ProcessName) &&
                         runningProcesses.Any(running => MatchesProcess(p.ProcessName!, running)));
 
-                    var targetProfile = matchedProfile ?? _profiles.First(p => p.Name == "Default");
+                    var targetProfile = matchedProfile ?? _profiles.FirstOrDefault(p => p.Name == "Default") ?? _profiles[0];
 
                     // Only switch when the running game changes, so a manual choice isn't undone every 5 s
                     bool changed = false;

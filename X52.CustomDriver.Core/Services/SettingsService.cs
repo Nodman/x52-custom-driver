@@ -13,6 +13,9 @@ namespace X52.CustomDriver.Core.Services
 
         public AppSettings CurrentSettings => _settings;
 
+        /// <summary>Set when the settings file had to be recovered at startup (shown to the user).</summary>
+        public string? LoadNotice { get; private set; }
+
         public SettingsService()
         {
             string appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
@@ -24,27 +27,16 @@ namespace X52.CustomDriver.Core.Services
 
         private void LoadSettings()
         {
-            try
-            {
-                if (File.Exists(_settingsPath))
-                {
-                    string json = File.ReadAllText(_settingsPath);
-                    _settings = JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
-                }
-            }
-            catch { _settings = new AppSettings(); }
-            
-            // Sync registry state in case user changed it externally
-            // But actually, we want the AppSettings to drive the Registry.
-            // If we are starting up, maybe we trust the file.
+            var (loaded, notice) = SafeJsonFile.Load<AppSettings>(_settingsPath, "The settings");
+            _settings = loaded ?? new AppSettings();
+            LoadNotice = notice;
         }
 
         public void SaveSettings()
         {
             try
             {
-                string json = JsonSerializer.Serialize(_settings, new JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(_settingsPath, json);
+                SafeJsonFile.Save(_settingsPath, _settings);
                 ApplyStartupSetting();
             }
             catch (Exception ex) { Console.WriteLine($"[ERROR] Failed to save settings: {ex.Message}"); }
