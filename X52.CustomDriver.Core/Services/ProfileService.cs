@@ -133,6 +133,29 @@ namespace X52.CustomDriver.Core.Services
             return name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? name[..^4] : name;
         }
 
+        /// <summary>
+        /// The GAME .EXE field may hold several names separated by , or ; and may use wildcards:
+        /// * = any text, ? = one character. Case doesn't matter, ".exe" is optional.
+        /// e.g. "DCS, DCS_server" or "Wardogs*".
+        /// </summary>
+        public static bool MatchesProcess(string pattern, string runningProcessName)
+        {
+            foreach (var part in pattern.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                string p = NormalizeProcessName(part);
+                if (p.Length == 0) continue;
+                if (p.IndexOfAny(new[] { '*', '?' }) < 0)
+                {
+                    if (string.Equals(p, runningProcessName, StringComparison.OrdinalIgnoreCase)) return true;
+                    continue;
+                }
+                string regex = "^" + System.Text.RegularExpressions.Regex.Escape(p).Replace("\\*", ".*").Replace("\\?", ".") + "$";
+                if (System.Text.RegularExpressions.Regex.IsMatch(runningProcessName, regex, System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                    return true;
+            }
+            return false;
+        }
+
         /// <summary>Deep copy (via JSON) for "duplicate profile".</summary>
         public X52Profile Duplicate(X52Profile source)
         {
@@ -164,7 +187,7 @@ namespace X52.CustomDriver.Core.Services
                     
                     var matchedProfile = _profiles.FirstOrDefault(p =>
                         !string.IsNullOrWhiteSpace(p.ProcessName) &&
-                        runningProcesses.Contains(NormalizeProcessName(p.ProcessName), StringComparer.OrdinalIgnoreCase));
+                        runningProcesses.Any(running => MatchesProcess(p.ProcessName!, running)));
 
                     var targetProfile = matchedProfile ?? _profiles.First(p => p.Name == "Default");
 

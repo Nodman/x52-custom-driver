@@ -79,9 +79,13 @@
                 </StackPanel>
                 <StackPanel Grid.Column="1" Margin="10,0,0,0">
                     <TextBlock Text="GAME .EXE (switches to this profile automatically)" Foreground="#888" FontSize="11" Margin="0,0,0,5"/>
-                    <TextBox x:Name="ProcessBox" Style="{StaticResource MacroRecordingTextBox}" Height="32"
-                             Text="{Binding ProcessName, UpdateSourceTrigger=PropertyChanged}"
-                             ToolTip="e.g. DCS or DCS.exe, FlightSimulator, StarCitizen"/>
+                    <DockPanel>
+                        <Button x:Name="PickProcessButton" DockPanel.Dock="Right" Content="PICK…" Style="{StaticResource NeonButton}" Height="32" Margin="6,0,0,0"
+                                Click="PickProcess_Click" ToolTip="Choose from programs that are running now (start the game first)"/>
+                        <TextBox x:Name="ProcessBox" Style="{StaticResource MacroRecordingTextBox}" Height="32"
+                                 Text="{Binding ProcessName, UpdateSourceTrigger=PropertyChanged}"
+                                 ToolTip="Exact exe name, e.g. DCS or DCS.exe. Several: DCS, DCS_server. Wildcards: Wardogs* (* = anything)"/>
+                    </DockPanel>
                 </StackPanel>
                 <Button Grid.Column="2" x:Name="MakeActiveButton" Content="MAKE ACTIVE" Style="{StaticResource NeonButton}"
                         Height="32" MinWidth="120" Margin="10,0,0,0" VerticalAlignment="Bottom" Click="MakeActive_Click"

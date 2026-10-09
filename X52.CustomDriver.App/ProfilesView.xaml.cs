@@ -125,6 +125,7 @@ namespace X52.CustomDriver.App
             bool isDefault = IsDefault(_selected);
             NameBox.IsEnabled = !isDefault;
             ProcessBox.IsEnabled = !isDefault;
+            PickProcessButton.IsEnabled = !isDefault;
             DeleteProfileButton.IsEnabled = !isDefault;
             NameBox.ToolTip = isDefault ? "Default is used whenever no game profile matches, so it can't be renamed." : null;
 
@@ -168,6 +169,51 @@ namespace X52.CustomDriver.App
             if (answer != MessageBoxResult.Yes) return;
             _vm.ProfileService.RemoveProfile(_selected);
             RefreshList(_vm.ProfileService.Profiles.FirstOrDefault());
+        }
+
+        // --- Game .exe picker: lists programs with a window that are running right now ---
+
+        private void PickProcess_Click(object sender, RoutedEventArgs e)
+        {
+            if (_selected == null || IsDefault(_selected)) return;
+
+            var items = new List<(string title, string exe)>();
+            int ownPid = Environment.ProcessId;
+            foreach (var p in System.Diagnostics.Process.GetProcesses())
+            {
+                try
+                {
+                    if (p.Id == ownPid || p.MainWindowHandle == IntPtr.Zero) continue;
+                    string title = p.MainWindowTitle;
+                    if (string.IsNullOrWhiteSpace(title)) continue;
+                    items.Add((title, p.ProcessName));
+                }
+                catch { /* some system processes can't be inspected */ }
+                finally { p.Dispose(); }
+            }
+
+            var menu = new System.Windows.Controls.ContextMenu { PlacementTarget = PickProcessButton, Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom };
+            if (items.Count == 0)
+            {
+                menu.Items.Add(new System.Windows.Controls.MenuItem { Header = "No programs with a window found – start the game first", IsEnabled = false });
+            }
+            else
+            {
+                foreach (var (title, exe) in items.OrderBy(i => i.title, StringComparer.CurrentCultureIgnoreCase))
+                {
+                    var item = new System.Windows.Controls.MenuItem { Header = $"{title}   —   {exe}.exe" };
+                    string chosen = exe;
+                    item.Click += (s, a) =>
+                    {
+                        if (_selected == null) return;
+                        _selected.ProcessName = chosen;
+                        ProcessBox.Text = chosen;
+                        ScheduleSave();
+                    };
+                    menu.Items.Add(item);
+                }
+            }
+            menu.IsOpen = true;
         }
 
         // --- Name (validated: not empty, unique, "Default" is reserved) ---
