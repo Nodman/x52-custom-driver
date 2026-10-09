@@ -74,7 +74,7 @@ This is a **Platinum Release** of the Ærakon driver. Contributions are welcome 
 
 The version lives in one place: the `VERSION` file in the repository root.
 The app (window title, file properties), the installer (title and file name) and the build artifacts all read it.
-To release a new version: change `VERSION`, add a `## vX.Y.Z` section to `CHANGELOG.md`, push,
-then push a tag `vX.Y.Z`. GitHub Actions builds the installer and portable zip and publishes the release
-with that changelog section as notes.
+To release a new version: change `VERSION`, add a `## vX.Y.Z` section to `CHANGELOG.md`, and push to `master`.
+GitHub Actions builds the installer and portable zip, creates the tag `vX.Y.Z` and publishes the release with that
+changelog section as notes. Pushes that don't change `VERSION` only build; a version is never released twice.
 
