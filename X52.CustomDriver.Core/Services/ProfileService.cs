@@ -91,6 +91,26 @@ namespace X52.CustomDriver.Core.Services
                     new ButtonMapping { ButtonName = "ButtonD", KeySequence = new List<string>{"LSHIFT", "G"} }
                 }
             });
+            // Wardogs: the game process runs behind Easy Anti-Cheat as WardogsClient-Win64-Shipping.exe
+            _profiles.Add(new X52Profile
+            {
+                Name = "Wardogs",
+                ProcessName = "WardogsClient-Win64-Shipping",
+                Mappings = new ObservableCollection<ButtonMapping> {
+                    new ButtonMapping { ButtonName = "SliderMax", KeySequence = new List<string>{"F"}, Action = "Hold" }
+                },
+                AxisSettings = new AxisSettings
+                {
+                    CurveX = new AxisCurve { Curvature = 0.6 },
+                    CurveY = new AxisCurve { Curvature = 0.6 },
+                    CurveTwist = new AxisCurve { Curvature = 0.6 }
+                },
+                Mouse = new ThumbMouseSettings
+                {
+                    Enabled = true, MoveCursor = true, LeftClick = false, MiddleClick = true, Scroll = true,
+                    Speed = 1200, Deadzone = 1
+                }
+            });
             SaveProfiles();
         }
 
