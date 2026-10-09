@@ -1,5 +1,8 @@
 ﻿#define MyAppName "Ærakon x52 driver"
-#define MyAppVersion "1.4.2"
+; Version comes from the VERSION file in the repository root (single source of truth)
+#define VersionFile FileOpen(AddBackslash(SourcePath) + "VERSION")
+#define MyAppVersion Trim(FileRead(VersionFile))
+#expr FileClose(VersionFile)
 #define MyAppPublisher "Ærakon"
 #define MyAppURL "https://github.com/Nodman/x52-custom-driver"
 #define MyAppExeName "X52.CustomDriver.App.exe"

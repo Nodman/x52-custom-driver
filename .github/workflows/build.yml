@@ -10,6 +10,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Read version
+        shell: pwsh
+        run: |
+          $v = (Get-Content VERSION -Raw).Trim()
+          "VERSION=$v" >> $env:GITHUB_ENV
+          Write-Host "Version $v"
+
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.0.x'
@@ -20,6 +27,14 @@ jobs:
       - name: Publish diagnostics console
         run: dotnet publish X52.CustomDriver.Console -c Release -r win-x64 --self-contained false
 
+      - name: Check the exe has the VERSION file's version
+        shell: pwsh
+        run: |
+          $exe = "X52.CustomDriver.App/bin/Release/net9.0-windows/win-x64/publish/X52.CustomDriver.App.exe"
+          $pv = (Get-Item $exe).VersionInfo.ProductVersion
+          if (-not $pv.StartsWith($env:VERSION)) { throw "exe version $pv does not match VERSION $env:VERSION" }
+          Write-Host "exe version $pv OK"
+
       - name: Put vJoyInterface.dll next to the exe
         shell: pwsh
         run: |
@@ -27,7 +42,6 @@ jobs:
           if (Test-Path "$p/x64/vJoyInterface.dll") { Copy-Item "$p/x64/vJoyInterface.dll" $p -Force }
 
       - name: Build installer
-        continue-on-error: true
         shell: pwsh
         run: |
           $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
@@ -36,11 +50,11 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: AerakonX52-portable
+          name: AerakonX52-portable-v${{ env.VERSION }}
           path: X52.CustomDriver.App/bin/Release/net9.0-windows/win-x64/publish
 
       - uses: actions/upload-artifact@v4
         with:
-          name: AerakonX52-installer
+          name: AerakonX52-installer-v${{ env.VERSION }}
           path: InstallerOutput/*.exe
-          if-no-files-found: warn
+          if-no-files-found: error

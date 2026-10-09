@@ -1,6 +1,6 @@
-﻿==============================================================================
-          ÆRAKON X52 DRIVER  –  fork de la comunidad, v1.4.0
-==============================================================================
+﻿========================================================
+  ÆRAKON X52 DRIVER  –  fork de la comunidad
+========================================================
 
 Driver de código abierto para el Saitek / Logitech X52 y X52 Pro, pensado
 para sustituir el antiguo software de Saitek (que choca con la Integridad de
@@ -24,23 +24,23 @@ Qué añade o corrige el fork
   - Oculta el X52 real a los juegos con HidHide (sin entradas duplicadas).
   - Desconexión / reconexión segura.
 
-------------------------------------------------------------------------------
+--------------------------------------------------------
 IMPRESCINDIBLE: vJoy
-------------------------------------------------------------------------------
+--------------------------------------------------------
   Descarga: https://github.com/jshafer817/vJoy/releases  (2.1.9.1 o superior)
 
 Puedes instalar vJoy antes o después de este driver. Al final, el instalador
 comprueba si está instalado y puede abrir la página de descarga.
 
-------------------------------------------------------------------------------
+--------------------------------------------------------
 RECOMENDADO: HidHide
-------------------------------------------------------------------------------
+--------------------------------------------------------
   Descarga: https://github.com/nefarius/HidHide/releases
   (reinicia Windows después de instalarlo)
 
-------------------------------------------------------------------------------
+--------------------------------------------------------
 PRIMER INICIO
-------------------------------------------------------------------------------
+--------------------------------------------------------
 1. Abre "Ærakon x52 driver".
 2. Si vJoy aún no está configurado para el X52, el driver lo ofrece.
 3. Si HidHide está instalado, ofrece ocultar el X52 real.

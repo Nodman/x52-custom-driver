@@ -1,4 +1,4 @@
-# Ærakon x52 driver – community fork (v1.4.0) 💎
+# Ærakon x52 driver – community fork 💎
 
 > **This is a fork** of [d2ndsky/x52-custom-driver](https://github.com/d2ndsky/x52-custom-driver).
 > It fixes button decoding (most stick buttons were never read on the standard X52), and adds:
@@ -29,13 +29,13 @@ A modern, high-performance, and open-source driver for the **Logitech/Saitek X52
   - ~6MB installer compared to the hundreds of MBs of the original software.
   - Easy installation and uninstallation with custom "Æ52" branding.
 
-## 🗂️ Profiles (v1.2.0)
+## 🗂️ Profiles
 
 The window now has three tabs: **LIVE** (axes, buttons, status), **PROFILES** and **SETTINGS**.
 Each profile has its own button mappings, axis curves (deadzone, curvature, saturation, invert for stick X/Y and twist) and thumb stick mouse settings,
 and switches on automatically when its game .exe is running. Everything is saved automatically.
 
-## 🖱️ Thumb Stick Mouse (v1.1.9)
+## 🖱️ Thumb Stick Mouse
 
 The small rubber thumb stick on the throttle now works as a real Windows mouse, like it did with the original Saitek driver:
 
@@ -68,3 +68,10 @@ This is a **Platinum Release** of the Ærakon driver. Contributions are welcome 
 
 ---
 *Created with ❤️ by d2ndsky / Ærakon*
+
+## 🔢 Versioning
+
+The version lives in one place: the `VERSION` file in the repository root.
+The app (window title, file properties), the installer (title and file name) and the build artifacts all read it.
+To release a new version, change `VERSION` and push.
+

@@ -1,0 +1,9 @@
+<Project>
+  <!-- Single source of truth for the version: the VERSION file in the repository root.
+       Used by every project here, and read by setup.iss and the build workflow. -->
+  <PropertyGroup>
+    <Version>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)VERSION').Trim())</Version>
+    <!-- Don't append the git commit hash to the product version shown in Windows -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
+</Project>

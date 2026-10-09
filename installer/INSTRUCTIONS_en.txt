@@ -1,6 +1,6 @@
-﻿==============================================================================
-              ÆRAKON X52 DRIVER  –  community fork, v1.4.0
-==============================================================================
+﻿========================================================
+  ÆRAKON X52 DRIVER  –  community fork
+========================================================
 
 Open-source driver for the Saitek / Logitech X52 and X52 Pro, made to replace
 the old Saitek software (which conflicts with Windows 11 Memory Integrity).
@@ -26,9 +26,9 @@ What the fork adds or fixes
   - Safe unplug / replug: the cursor stops, keys are released, and the driver
     reconnects by itself.
 
-------------------------------------------------------------------------------
+--------------------------------------------------------
 REQUIRED: vJoy (virtual joystick)
-------------------------------------------------------------------------------
+--------------------------------------------------------
 Games receive the X52 through vJoy. Without vJoy the driver can't work.
 
   Download: https://github.com/jshafer817/vJoy/releases  (2.1.9.1 or newer)
@@ -36,17 +36,17 @@ Games receive the X52 through vJoy. Without vJoy the driver can't work.
 You can install vJoy before or after this driver. Setup checks for it at the
 end and can open the download page for you.
 
-------------------------------------------------------------------------------
+--------------------------------------------------------
 RECOMMENDED: HidHide
-------------------------------------------------------------------------------
+--------------------------------------------------------
 Hides the real X52 from games so they only see the virtual stick.
 
   Download: https://github.com/nefarius/HidHide/releases
   (restart Windows after installing it)
 
-------------------------------------------------------------------------------
+--------------------------------------------------------
 FIRST START
-------------------------------------------------------------------------------
+--------------------------------------------------------
 1. Start "Ærakon x52 driver".
 2. If vJoy isn't set up for the X52 yet, the driver offers to do it
    (Windows asks for admin permission once).
