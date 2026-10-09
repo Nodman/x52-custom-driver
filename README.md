@@ -54,9 +54,10 @@ The small rubber thumb stick on the throttle now works as a real Windows mouse, 
 
 ## 💻 Installation
 
-1. Download the installer from the latest successful run under **Actions** (artifact *AerakonX52-installer*).
-2. Run the installer.
-3. Open the app and ensure the "vJoy Status" indicator is green.
+1. Download `AerakonX52Driver_Setup_vX.Y.Z.exe` from the [latest release](https://github.com/Nodman/x52-custom-driver/releases/latest)
+   (or the `_portable.zip` if you don't want to install anything).
+2. Run the installer. It checks for vJoy and can open its download page.
+3. Start the driver: on first start it offers to set up vJoy and to hide the real X52 from games.
 
 ## 🕹️ Why use this instead of the original?
 
@@ -73,5 +74,7 @@ This is a **Platinum Release** of the Ærakon driver. Contributions are welcome 
 
 The version lives in one place: the `VERSION` file in the repository root.
 The app (window title, file properties), the installer (title and file name) and the build artifacts all read it.
-To release a new version, change `VERSION` and push.
+To release a new version: change `VERSION`, add a `## vX.Y.Z` section to `CHANGELOG.md`, push,
+then push a tag `vX.Y.Z`. GitHub Actions builds the installer and portable zip and publishes the release
+with that changelog section as notes.
 
