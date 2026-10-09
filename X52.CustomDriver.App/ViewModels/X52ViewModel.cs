@@ -136,7 +136,10 @@ namespace X52.CustomDriver.App.ViewModels
             else if (!cfg.HideRealX52)
                 HideRealX52Status = "Games can see the real X52 and the virtual stick (inputs arrive twice).";
             else if (id == null)
-                HideRealX52Status = "On. Plug in the X52 to check it.";
+                HideRealX52Status = cfg.HiddenInstanceIds.Count > 0
+                    ? "⚠ Hiding is on, but this driver can't see the X52. If it is plugged in, it's hidden from this copy of the driver " +
+                      "(the driver was moved or reinstalled in another folder). Click FIX ACCESS."
+                    : "On. Plug in the X52 to check it.";
             else
             {
                 bool? hidden = HidHideManager.IsHidden(id);
@@ -152,16 +155,20 @@ namespace X52.CustomDriver.App.ViewModels
             OnPropertyChanged(nameof(HideRealX52Status));
         }
 
-        public async Task<string> HideRealX52Async()
+        /// <summary>
+        /// Hide the X52 (or re-authorise this copy of the driver). Works without seeing the stick when
+        /// its IDs are already known, which is exactly the case after the driver was moved.
+        /// </summary>
+        public async Task<string> HideRealX52Async(bool switchToNormalMode = false)
         {
             string? id = _hidService.DeviceInstanceId;
-            if (id == null) return "Plug in the X52 first.";
-
             var cfg = _settingsService.CurrentSettings;
-            var ids = cfg.HiddenInstanceIds.Append(id).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            var ids = cfg.HiddenInstanceIds.ToList();
+            if (id != null && !ids.Contains(id, StringComparer.OrdinalIgnoreCase)) ids.Add(id);
+            if (ids.Count == 0) return "Plug in the X52 first.";
 
             SetBusy(true);
-            var (ok, message) = await HidHideManager.HideAsync(ids);
+            var (ok, message) = await HidHideManager.HideAsync(ids, switchToNormalMode);
             SetBusy(false);
 
             if (ok)

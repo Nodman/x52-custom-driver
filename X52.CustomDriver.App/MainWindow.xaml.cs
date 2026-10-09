@@ -149,7 +149,7 @@ namespace X52.CustomDriver.App
 
                 if (answer == MessageBoxResult.Yes)
                 {
-                    string error = await vm.HideRealX52Async();
+                    string error = await HideWithInvertedModeCheckAsync(vm);
                     if (error.Length > 0)
                         System.Windows.MessageBox.Show(this, error, "HidHide", MessageBoxButton.OK, MessageBoxImage.Warning);
                 }
@@ -160,6 +160,37 @@ namespace X52.CustomDriver.App
                 }
                 UpdateHideButtons();
             }
+            else if (vm.HidHideInstalled && vm.HideRealX52Enabled && !vm.IsX52Connected
+                     && cfg.HiddenInstanceIds.Count > 0)
+            {
+                // Typical after the driver was moved or reinstalled elsewhere: HidHide still hides the
+                // X52, but only from the old exe path, so this copy can't see it either.
+                vm.ShowBanner("Can't see the X52. If it is plugged in, it is hidden from this copy of the driver " +
+                              "(was the driver moved?). Open SETTINGS → FIX ACCESS.", isError: true);
+            }
+            UpdateHideButtons();
+        }
+
+        /// <summary>
+        /// Hide the X52. If HidHide is in inverted mode (a global setting other tools may rely on),
+        /// explain and only switch it to normal mode when the user agrees.
+        /// </summary>
+        private async Task<string> HideWithInvertedModeCheckAsync(X52ViewModel vm)
+        {
+            string error = await vm.HideRealX52Async();
+            if (error != HidHideManager.InvertedModeMessage) return error;
+
+            var answer = System.Windows.MessageBox.Show(this,
+                "HidHide is set to \"inverted\" mode (its \"Inverse application cloak\" option): listed programs are the ones " +
+                "that can NOT see hidden devices.\n\n" +
+                "To hide the X52 from games, HidHide must be switched to normal mode. This is a global HidHide setting: " +
+                "if you set up inverted mode on purpose for another tool, devices you hid for it may become visible " +
+                "to other programs, or hidden from programs that could see them before.\n\n" +
+                "Switch HidHide to normal mode and hide the X52?",
+                "HidHide inverted mode", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+            if (answer != MessageBoxResult.Yes)
+                return "Not changed: HidHide is in inverted mode.";
+            return await vm.HideRealX52Async(switchToNormalMode: true);
         }
 
         // --- Hide real X52 (HidHide) ---
@@ -176,8 +207,12 @@ namespace X52.CustomDriver.App
         {
             if (DataContext is not X52ViewModel vm) return;
             bool busy = vm.HideRealX52Busy;
+            // Hiding on but the stick is invisible to us: most likely the driver moved (HidHide only
+            // lets the old exe path see it). Hiding again adds this exe to HidHide's allowed list.
+            bool needsAccess = vm.HideRealX52Enabled && !vm.IsX52Connected && vm.Settings.CurrentSettings.HiddenInstanceIds.Count > 0;
             HideX52Button.IsEnabled = vm.HidHideInstalled && !busy;
-            HideX52Button.Content = vm.HideRealX52Enabled ? "HIDE AGAIN (THIS USB PORT)" : "HIDE REAL X52";
+            HideX52Button.Content = needsAccess ? "FIX ACCESS"
+                : vm.HideRealX52Enabled ? "HIDE AGAIN (THIS USB PORT)" : "HIDE REAL X52";
             ShowX52Button.IsEnabled = vm.HidHideInstalled && vm.HideRealX52Enabled && !busy;
             GetHidHideButton.Visibility = vm.HidHideInstalled ? Visibility.Collapsed : Visibility.Visible;
         }
@@ -187,7 +222,7 @@ namespace X52.CustomDriver.App
             if (DataContext is not X52ViewModel vm) return;
             HideX52Message.Text = "Waiting for admin permission…";
             HideX52Button.IsEnabled = ShowX52Button.IsEnabled = false;
-            string error = await vm.HideRealX52Async();
+            string error = await HideWithInvertedModeCheckAsync(vm);
             HideX52Message.Text = error;
             UpdateHideButtons();
         }

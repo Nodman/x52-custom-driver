@@ -21,7 +21,10 @@ namespace X52.CustomDriver.App
         public const string DownloadUrl = "https://github.com/nefarius/HidHide/releases/latest";
 
         private const string CommandSwitch = "--hidhide";
-        private const int ExitOk = 0, ExitNotInstalled = 2, ExitError = 3;
+        private const int ExitOk = 0, ExitNotInstalled = 2, ExitError = 3, ExitInvertedMode = 4;
+
+        /// <summary>Returned as the message when HidHide is in inverted mode and we didn't change it.</summary>
+        public const string InvertedModeMessage = "HIDHIDE_INVERTED_MODE";
 
         public static string ExePath =>
             Process.GetCurrentProcess().MainModule?.FileName
@@ -59,9 +62,13 @@ namespace X52.CustomDriver.App
 
         // ---------------- Unelevated side ----------------
 
-        /// <summary>Hide these devices from everything except this exe. Shows one UAC prompt.</summary>
-        public static Task<(bool ok, string message)> HideAsync(IEnumerable<string> instanceIds) =>
-            RunElevatedAsync("hide", instanceIds);
+        /// <summary>
+        /// Hide these devices from everything except this exe. Shows one UAC prompt.
+        /// If HidHide is in inverted mode, nothing is changed and InvertedModeMessage is returned,
+        /// unless <paramref name="switchToNormalMode"/> is true (the user agreed).
+        /// </summary>
+        public static Task<(bool ok, string message)> HideAsync(IEnumerable<string> instanceIds, bool switchToNormalMode = false) =>
+            RunElevatedAsync(switchToNormalMode ? "hide-normal-mode" : "hide", instanceIds);
 
         /// <summary>Make these devices visible to games again. Shows one UAC prompt.</summary>
         public static Task<(bool ok, string message)> ShowAsync(IEnumerable<string> instanceIds) =>
@@ -96,6 +103,7 @@ namespace X52.CustomDriver.App
                     {
                         ExitOk => (true, detail),
                         ExitNotInstalled => (false, "HidHide is not installed."),
+                        ExitInvertedMode => (false, InvertedModeMessage),
                         _ => (false, detail.Length > 0 ? detail : $"HidHide change failed (code {p.ExitCode}).")
                     };
                 }
@@ -129,6 +137,18 @@ namespace X52.CustomDriver.App
                     .Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
                 string appPath = args.Length > 3 ? args[3] : ExePath;
 
+                if (mode == "uninstall-request")
+                {
+                    // Started (not elevated) by the uninstaller as the user who used the driver:
+                    // read that user's hidden IDs here, then do the actual change elevated.
+                    var hidden = ReadHiddenIdsFromSettings();
+                    if (!IsInstalled) return true; // nothing to undo
+                    var (ok, message) = RunElevatedAsync("uninstall", hidden).GetAwaiter().GetResult();
+                    exitCode = ok ? ExitOk : ExitError;
+                    if (!ok) WriteResult(message);
+                    return true;
+                }
+
                 var svc = new HidHideControlService();
                 if (!svc.IsInstalled)
                 {
@@ -136,10 +156,19 @@ namespace X52.CustomDriver.App
                     return true;
                 }
 
-                if (mode == "hide")
+                if (mode == "hide" || mode == "hide-normal-mode")
                 {
-                    // Whitelist mode: only listed programs may see hidden devices
-                    if (svc.IsAppListInverted) svc.IsAppListInverted = false;
+                    // We need HidHide's normal mode (only listed programs may see hidden devices).
+                    // Inverted mode is a global choice the user may rely on: only change it when asked.
+                    if (svc.IsAppListInverted)
+                    {
+                        if (mode != "hide-normal-mode")
+                        {
+                            exitCode = ExitInvertedMode;
+                            return true;
+                        }
+                        svc.IsAppListInverted = false;
+                    }
 
                     if (!svc.ApplicationPaths.Any(p => string.Equals(p, appPath, StringComparison.OrdinalIgnoreCase)))
                         svc.AddApplicationPath(appPath);
@@ -150,6 +179,18 @@ namespace X52.CustomDriver.App
 
                     svc.IsActive = true;
                     WriteResult("Hidden");
+                }
+                else if (mode == "uninstall")
+                {
+                    // Called by the uninstaller: make the X52 visible again and remove this exe from
+                    // HidHide's list. The hidden device IDs come from this user's settings.json.
+                    var hiddenIds = ids.Length > 0 ? ids : ReadHiddenIdsFromSettings();
+                    foreach (var id in hiddenIds)
+                        foreach (var b in svc.BlockedInstanceIds.Where(b => string.Equals(b, id, StringComparison.OrdinalIgnoreCase)).ToList())
+                            svc.RemoveBlockedInstanceId(b);
+                    foreach (var p in svc.ApplicationPaths.Where(p => string.Equals(p, appPath, StringComparison.OrdinalIgnoreCase)).ToList())
+                        svc.RemoveApplicationPath(p);
+                    WriteResult("Uninstalled");
                 }
                 else if (mode == "show")
                 {
@@ -171,6 +212,17 @@ namespace X52.CustomDriver.App
                 WriteResult(ex.Message);
             }
             return true;
+        }
+
+        private static string[] ReadHiddenIdsFromSettings()
+        {
+            try
+            {
+                string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AerakonX52Driver", "settings.json");
+                var settings = System.Text.Json.JsonSerializer.Deserialize<X52.CustomDriver.Core.Models.AppSettings>(File.ReadAllText(path));
+                return settings?.HiddenInstanceIds?.ToArray() ?? Array.Empty<string>();
+            }
+            catch { return Array.Empty<string>(); }
         }
 
         private static void WriteResult(string text)

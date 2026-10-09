@@ -40,6 +40,12 @@ Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"; InfoBeforeFile:
 [CustomMessages]
 english.VJoyMissing=vJoy is not installed.%n%nThis driver sends your X52 to games through the vJoy virtual joystick, so vJoy is required.%n%nOpen the vJoy download page now?%nInstall vJoy, then start the driver – it will offer to set vJoy up for the X52.
 ukrainian.VJoyMissing=vJoy не встановлено.%n%nЦей драйвер передає X52 у гри через віртуальний джойстик vJoy, тому vJoy обов'язковий.%n%nВідкрити сторінку завантаження vJoy зараз?%nВстановіть vJoy, потім запустіть драйвер – він запропонує налаштувати vJoy для X52.
+english.UnhideX52=The driver hid your X52 from other programs (HidHide).%n%nTo make it visible to games again, Windows will now ask for admin permission once.
+ukrainian.UnhideX52=Драйвер приховав ваш X52 від інших програм (HidHide).%n%nЩоб ігри знову бачили X52, Windows зараз один раз попросить дозвіл адміністратора.
+spanish.UnhideX52=El driver ocultó tu X52 a otros programas (HidHide).%n%nPara que los juegos vuelvan a verlo, Windows pedirá ahora permiso de administrador una vez.
+english.UnhideX52Failed=The X52 could not be made visible again automatically.%n%nOpen HidHide Configuration Client and remove the X52 from the "Applications" / "Devices" lists, or reinstall the driver and use SETTINGS → SHOW REAL X52 before uninstalling.
+ukrainian.UnhideX52Failed=Не вдалося автоматично знову зробити X52 видимим.%n%nВідкрийте HidHide Configuration Client і приберіть X52 зі списку пристроїв, або перевстановіть драйвер і натисніть SETTINGS → SHOW REAL X52 перед видаленням.
+spanish.UnhideX52Failed=No se pudo volver a mostrar el X52 automáticamente.%n%nAbre HidHide Configuration Client y quita el X52 de la lista de dispositivos, o reinstala el driver y usa SETTINGS → SHOW REAL X52 antes de desinstalar.
 spanish.VJoyMissing=vJoy no está instalado.%n%nEste driver envía el X52 a los juegos a través del joystick virtual vJoy, así que vJoy es imprescindible.%n%n¿Abrir ahora la página de descarga de vJoy?%nInstala vJoy y luego abre el driver: te ofrecerá configurarlo para el X52.
 
 [Tasks]
@@ -85,5 +91,33 @@ begin
   begin
     if MsgBox(CustomMessage('VJoyMissing'), mbConfirmation, MB_YESNO) = IDYES then
       ShellExec('open', VJoyDownloadUrl, '', '', SW_SHOWNORMAL, ewNoWait, ErrorCode);
+  end;
+end;
+
+function DriverHidTheX52(): Boolean;
+var
+  Json: AnsiString;
+begin
+  Result := False;
+  if LoadStringFromFile(ExpandConstant('{localappdata}\AerakonX52Driver\settings.json'), Json) then
+    Result := Pos('"HideRealX52": true', Json) > 0;
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  ResultCode: Integer;
+begin
+  // Before the files are removed: if the driver hid the X52 with HidHide, un-hide it, otherwise
+  // the stick would stay invisible to every game after the driver is gone.
+  if (CurUninstallStep = usUninstall) and DriverHidTheX52() then
+  begin
+    if not UninstallSilent then
+      MsgBox(CustomMessage('UnhideX52'), mbInformation, MB_OK);
+    if (not Exec(ExpandConstant('{app}\{#MyAppExeName}'), '--hidhide uninstall-request', '',
+                 SW_HIDE, ewWaitUntilTerminated, ResultCode)) or (ResultCode <> 0) then
+    begin
+      if not UninstallSilent then
+        MsgBox(CustomMessage('UnhideX52Failed'), mbError, MB_OK);
+    end;
   end;
 end;
