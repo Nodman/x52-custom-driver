@@ -270,7 +270,7 @@ namespace X52.CustomDriver.App
         }
 
         private static string VJoyDoneText(X52ViewModel vm) =>
-            $"vJoy is set up: device #{vm.VJoyDeviceId} has 128 buttons and the 8-way hat. Restart games that were running." +
+            $"vJoy is set up: the X52 uses vJoy device #{vm.VJoyDeviceId} with all buttons and the 8-way hat. Restart games that were running." +
             (vm.VJoyDeviceId != 1 ? " Games see it as a separate controller: bind the X52 once in each game." : "");
 
         /// <summary>
@@ -295,37 +295,58 @@ namespace X52.CustomDriver.App
                            : vm.DescribeVJoyDevice(current) + ", but the driver couldn't use it.";
             string message = problem + "\n\n" +
                 "For every X52 button in all three modes and the 8-way hat, the X52 needs a vJoy device with " +
-                "128 buttons and a POV hat. Windows will ask for admin permission once, and vJoy briefly restarts " +
-                "all its devices.";
+                "128 buttons and a POV hat. Creating or changing a device needs admin permission once, and vJoy " +
+                "briefly restarts all its devices.";
 
-            var choices = new List<ChoiceDialog.Choice>();
-            var devices = new List<uint?>();
-            if (!busy)
+            // Options: (label, description, device, run vJoyConfig?, priority for the default)
+            var options = new List<(string label, string desc, uint device, bool reconfigure, int rank)>();
+            string newController = "Games see the X52 as a new controller, so bind it once in each game.";
+
+            // The device the driver uses now, when it's there
+            if (!busy && !missing)
+                options.Add(($"CHANGE DEVICE #{current}",
+                    current == 1 ? "Give vJoy device 1 the X52 layout. Other programs and game bindings that use device 1 will see the new layout."
+                                 : $"Give vJoy device #{current} the X52 layout.",
+                    current, true, 1));
+
+            // Device 1 (e.g. vJoy was reinstalled and the separate device the driver remembers is gone)
+            if (current != 1)
             {
-                string label = missing ? $"CREATE DEVICE #{current} AGAIN" : $"CHANGE DEVICE #{current}";
-                string desc = missing ? $"Make vJoy device #{current} again, with the X52 layout."
-                    : current == 1 ? "Give vJoy device 1 the X52 layout. Other programs and game bindings that use device 1 will see the new layout."
-                    : $"Give vJoy device #{current} the X52 layout.";
-                choices.Add(new ChoiceDialog.Choice(label, desc, IsDefault: true));
-                devices.Add(current);
+                int s1 = vm.VJoyStatusOf(1);
+                if (s1 == X52ViewModel.VJoyMissing)
+                    options.Add(("CREATE DEVICE #1", "Make vJoy device 1 with the X52 layout.", 1, true, 2));
+                else if (s1 != X52ViewModel.VJoyBusy && s1 != X52ViewModel.VJoyUnknown)
+                {
+                    if (vm.VJoyDeviceFits(1))
+                        options.Add(("USE DEVICE #1", vm.DescribeVJoyDevice(1) + ". That's enough for the X52, so nothing needs to change.", 1, false, 2));
+                    else
+                        options.Add(("CHANGE DEVICE #1", vm.DescribeVJoyDevice(1) + ". Give it the X52 layout; other programs and game " +
+                                     "bindings that use device 1 will see the new layout.", 1, true, 2));
+                }
             }
+
+            // The remembered device is gone: make it again
+            if (missing)
+                options.Add(($"CREATE DEVICE #{current} AGAIN", $"Make vJoy device #{current} again, with the X52 layout. {newController}", current, true, 3));
+
+            // A new device just for the X52
             if (free != null && (busy || (current == 1 && !missing)))
-            {
-                choices.Add(new ChoiceDialog.Choice($"USE A SEPARATE DEVICE (#{free})",
-                    $"Create vJoy device #{free} just for the X52. Device #{current} stays as it is. " +
-                    "Games see the X52 as a new controller, so bind it once in each game. Windows gives all vJoy " +
-                    "devices one shared name, so both will be listed as \"vJoy Device\" (the LIVE tab shows which number is the X52).",
-                    IsDefault: busy));
-                devices.Add(free);
-            }
-            if (devices.Count == 0)
+                options.Add(($"USE A SEPARATE DEVICE (#{free})",
+                    $"Create vJoy device #{free} just for the X52. Device #{current} stays as it is. {newController} " +
+                    "Windows gives all vJoy devices one shared name, so both will be listed as \"vJoy Device\" (the LIVE tab shows which number is the X52).",
+                    free.Value, true, 4));
+
+            if (options.Count == 0)
                 return $"vJoy device #{current} is used by another program and vJoy has no room for another device (16 max). Close the other program or free a device in Configure vJoy.";
+
+            int best = options.Min(o => o.rank);
+            var choices = options.Select(o => new ChoiceDialog.Choice(o.label, o.desc, IsDefault: o.rank == best)).ToList();
             choices.Add(new ChoiceDialog.Choice("NOT NOW", "You can do this later in SETTINGS → SET UP VJOY."));
-            devices.Add(null);
 
             int pick = ChoiceDialog.Ask(this, "Set up vJoy for the X52", message, choices);
-            if (pick < 0 || devices[pick] == null) return null;
-            return await vm.SetUpVJoyAsync(devices[pick]!.Value);
+            if (pick < 0 || pick >= options.Count) return null;
+            var chosen = options[pick];
+            return await vm.SetUpVJoyAsync(chosen.device, chosen.reconfigure);
         }
 
         private void OpenVJoyMonitor_Click(object sender, RoutedEventArgs e)

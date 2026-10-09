@@ -2,6 +2,11 @@
 
 Each `## vX.Y.Z` section below becomes the notes of the GitHub Release with that tag.
 
+## v1.4.10
+
+### Fixes
+- **vJoy setup after reinstalling vJoy**: if the separate vJoy device the driver remembered is gone, setup now also offers vJoy device 1 (the default choice): *Use device #1* when it already has enough buttons and a POV hat (no admin prompt), otherwise *Change device #1* or *Create device #1*. Recreating the old device is still offered.
+
 ## v1.4.9
 
 ### Fixes

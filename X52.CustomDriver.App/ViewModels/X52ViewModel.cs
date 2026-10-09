@@ -779,6 +779,16 @@ namespace X52.CustomDriver.App.ViewModels
             return $"vJoy device #{id}: {b} buttons, {PovText(c, d)}{who}";
         }
 
+        public int VJoyStatusOf(uint id) => _vJoyService.QueryDeviceStatus(id);
+
+        /// <summary>Whether an existing vJoy device already has enough buttons and a POV hat for the X52.</summary>
+        public bool VJoyDeviceFits(uint id)
+        {
+            if (_vJoyService.QueryDeviceStatus(id) is VJoyMissing or VJoyUnknown) return false;
+            var (b, c, d) = _vJoyService.QueryDeviceLayout(id);
+            return b >= NeededVJoyButtons && (c > 0 || d > 0);
+        }
+
         /// <summary>First vJoy device number (2-16) that doesn't exist yet, so it can be created for the X52.</summary>
         public uint? FindFreeVJoyDeviceId()
         {
@@ -792,21 +802,21 @@ namespace X52.CustomDriver.App.ViewModels
         /// (all 8 axes, 128 buttons, 1 continuous POV; one UAC prompt), then use it from now on.
         /// vJoy restarts its driver for this, so every vJoy device disappears for a moment.
         /// </summary>
-        public async Task<string> SetUpVJoyAsync(uint deviceId)
+        public async Task<string> SetUpVJoyAsync(uint deviceId, bool reconfigure = true)
         {
             string? tool = FindVJoyTool("vJoyConfig.exe");
-            if (tool == null) return "vJoyConfig.exe wasn't found. Is vJoy installed in Program Files\\vJoy?";
+            if (reconfigure && tool == null) return "vJoyConfig.exe wasn't found. Is vJoy installed in Program Files\\vJoy?";
             uint previous = _vJoyService.DeviceId;
 
             // Let go of the device while vJoy rebuilds it
             for (int n = 1; n <= 128; n++) _vjoyPressed[n] = false;
             _vJoyService.Shutdown();
 
-            string error = await Task.Run(() =>
+            string error = !reconfigure ? "" : await Task.Run(() =>
             {
                 try
                 {
-                    var psi = new System.Diagnostics.ProcessStartInfo(tool, $"{deviceId} -f -a x y z rx ry rz sl0 sl1 -b 128 -p 1")
+                    var psi = new System.Diagnostics.ProcessStartInfo(tool!, $"{deviceId} -f -a x y z rx ry rz sl0 sl1 -b 128 -p 1")
                     {
                         UseShellExecute = true,
                         Verb = "runas",
