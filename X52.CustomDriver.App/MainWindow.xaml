@@ -6,7 +6,35 @@
     xmlns:local="clr-namespace:X52.CustomDriver.App" mc:Ignorable="d" Title="Ærakon x52 driver" Height="720" Width="1080" ResizeMode="CanResizeWithGrip" WindowStyle="SingleBorderWindow" Background="#050505" Foreground="White" FontFamily="Segoe UI Semibold">
 
     <Grid Margin="20,10,20,20">
-        <TabControl x:Name="MainTabs" SelectionChanged="MainTabs_SelectionChanged">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Message bar: recovered files, save errors -->
+        <Border Grid.Row="0" CornerRadius="6" Padding="12,8" Margin="0,0,0,8"
+                Visibility="{Binding HasBanner, Converter={StaticResource BoolToVisibility}}">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Background" Value="#0D2A33"/>
+                    <Setter Property="BorderBrush" Value="#00D2FF"/>
+                    <Setter Property="BorderThickness" Value="1"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding BannerIsError}" Value="True">
+                            <Setter Property="Background" Value="#3A0010"/>
+                            <Setter Property="BorderBrush" Value="#FF5555"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Content="✕" Background="Transparent" Foreground="#AAA" BorderThickness="0" Padding="8,0"
+                        VerticalAlignment="Top" Click="DismissBanner_Click" ToolTip="Hide this message"/>
+                <TextBlock Text="{Binding BannerText}" TextWrapping="Wrap" Foreground="White" FontSize="12"/>
+            </DockPanel>
+        </Border>
+
+        <TabControl Grid.Row="1" x:Name="MainTabs" SelectionChanged="MainTabs_SelectionChanged">
             <TabItem Header="LIVE">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <Grid>

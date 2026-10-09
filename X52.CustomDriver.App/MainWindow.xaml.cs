@@ -204,6 +204,11 @@ namespace X52.CustomDriver.App
 
         private void GetHidHide_Click(object sender, RoutedEventArgs e) => HidHideManager.OpenDownloadPage();
 
+        private void DismissBanner_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is X52ViewModel vm) vm.DismissBanner();
+        }
+
         // --- vJoy / Game Controllers ---
 
         private void OpenJoyCpl_Click(object sender, RoutedEventArgs e)

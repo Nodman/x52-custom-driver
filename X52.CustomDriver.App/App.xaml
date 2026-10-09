@@ -47,6 +47,7 @@
 
         <local:ModeConverter x:Key="ModeConverter"/>
         <local:ButtonLabelConverter x:Key="ButtonLabel"/>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
 
         <!-- Pinceles de Contraste Extremo -->
         <SolidColorBrush x:Key="NeonBlue" Color="#00D2FF"/>

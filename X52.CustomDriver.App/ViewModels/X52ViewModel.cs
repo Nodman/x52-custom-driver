@@ -270,6 +270,42 @@ namespace X52.CustomDriver.App.ViewModels
 
         public string ProfileName => CurrentProfile.Name;
 
+        // --- Message bar at the top of the window (load recovery notices, save errors) ---
+        private string? _bannerText;
+        private bool _bannerIsError;
+        private bool _bannerFromSave;
+
+        public string? BannerText => _bannerText;
+        public bool HasBanner => !string.IsNullOrEmpty(_bannerText);
+        public bool BannerIsError => _bannerIsError;
+
+        public void ShowBanner(string text, bool isError, bool fromSave = false)
+        {
+            void Apply()
+            {
+                _bannerText = text;
+                _bannerIsError = isError;
+                _bannerFromSave = fromSave;
+                OnPropertyChanged(nameof(BannerText));
+                OnPropertyChanged(nameof(HasBanner));
+                OnPropertyChanged(nameof(BannerIsError));
+            }
+            var d = System.Windows.Application.Current?.Dispatcher;
+            if (d == null || d.CheckAccess()) Apply(); else d.BeginInvoke(new Action(Apply));
+        }
+
+        public void DismissBanner()
+        {
+            _bannerText = null;
+            OnPropertyChanged(nameof(BannerText));
+            OnPropertyChanged(nameof(HasBanner));
+        }
+
+        private void ClearSaveError()
+        {
+            if (_bannerFromSave && _bannerIsError) ShowBanner("", false);
+        }
+
         // --- Manual profile switching ---
         public IReadOnlyList<X52Profile> Profiles => _profileService.Profiles;
 
@@ -307,6 +343,14 @@ namespace X52.CustomDriver.App.ViewModels
 
             // Work on the real active profile (not a throwaway copy), so edits are saved
             _currentProfile = _profileService.ActiveProfile;
+
+            // Problems with saving/loading are shown in the message bar, not swallowed
+            _profileService.SaveFailed += (s, msg) => ShowBanner(msg, isError: true, fromSave: true);
+            _settingsService.SaveFailed += (s, msg) => ShowBanner(msg, isError: true, fromSave: true);
+            _profileService.Saved += (s, e) => ClearSaveError();
+            _settingsService.Saved += (s, e) => ClearSaveError();
+            var notices = new[] { _profileService.LoadNotice, _settingsService.LoadNotice }.Where(n => !string.IsNullOrEmpty(n)).ToList();
+            if (notices.Count > 0) ShowBanner(string.Join(" ", notices), isError: false);
 
             // Migrate pre-1.2.0 global thumb stick settings into every profile
             bool migrated = false;
@@ -777,7 +821,7 @@ namespace X52.CustomDriver.App.ViewModels
             _ => Centered(State.X, 2048)
         };
 
-        public void SaveProfiles() => _profileService.SaveProfiles();
+        public bool SaveProfiles() => _profileService.SaveProfiles();
 
         public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string? name = null)

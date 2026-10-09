@@ -17,6 +17,25 @@ namespace X52.CustomDriver.App
 
         public static bool IsExiting { get; set; } = false;
 
+        // Startup log next to the exe, or in %LocalAppData% when that folder is read-only. Never throws.
+        private static string _logPath = "";
+        internal static void Log(string line, bool overwrite = false)
+        {
+            foreach (var path in new[] { _logPath, System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AerakonX52Driver", "startup_log.txt") })
+            {
+                try
+                {
+                    if (string.IsNullOrEmpty(path)) continue;
+                    System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)!);
+                    string text = line.EndsWith("\n") ? line : line + "\n";
+                    if (overwrite) System.IO.File.WriteAllText(path, text); else System.IO.File.AppendAllText(path, text);
+                    _logPath = path;
+                    return;
+                }
+                catch { /* try the next location */ }
+            }
+        }
+
         public const string VJoyDownloadUrl = "https://github.com/jshafer817/vJoy/releases/latest";
 
         protected override void OnStartup(StartupEventArgs e)
@@ -31,18 +50,18 @@ namespace X52.CustomDriver.App
                 return;
             }
 
-            string logPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "startup_log.txt");
-            System.IO.File.WriteAllText(logPath, "--- Startup Log ---\n");
+            _logPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "startup_log.txt");
+            Log("--- Startup Log ---", overwrite: true);
 
             try
             {
-                System.IO.File.AppendAllText(logPath, "Initializing Services...\n");
+                Log("Initializing Services...\n");
                 _vJoyService = new VJoyService();
                 _hidService = new X52HidService();
                 _profileService = new ProfileService();
                 var settingsService = new SettingsService();
 
-                System.IO.File.AppendAllText(logPath, "Connecting Hardware...\n");
+                Log("Connecting Hardware...\n");
                 
                 // Initialize vJoy and check for success
                 if (!_vJoyService.Initialize(1))
@@ -71,11 +90,11 @@ namespace X52.CustomDriver.App
                 _hidService.Initialize();
                 _profileService.StartWatcher();
                 
-                System.IO.File.AppendAllText(logPath, "Hardware Connected. Starting Listener...\n");
+                Log("Hardware Connected. Starting Listener...\n");
                 // Always listen: the HID service connects (and reconnects) by itself when the stick is plugged in
                 _hidService.StartListening();
 
-                System.IO.File.AppendAllText(logPath, "Setup Tray Icon...\n");
+                Log("Setup Tray Icon...\n");
                 _notifyIcon = new NotifyIcon();
                 try 
                 {
@@ -83,7 +102,7 @@ namespace X52.CustomDriver.App
                     if (!string.IsNullOrEmpty(iconPath))
                         _notifyIcon.Icon = System.Drawing.Icon.ExtractAssociatedIcon(iconPath);
                 }
-                catch (Exception exIcon) { System.IO.File.AppendAllText(logPath, $"Icon Error: {exIcon.Message}\n"); }
+                catch (Exception exIcon) { Log($"Icon Error: {exIcon.Message}\n"); }
                 
                 _notifyIcon.Visible = true;
                 _notifyIcon.Text = "Ærakon x52 driver";
@@ -111,21 +130,21 @@ namespace X52.CustomDriver.App
                 contextMenu.Items.Add("Exit", null, (s, args) => { IsExiting = true; System.Windows.Application.Current.Shutdown(); });
                 _notifyIcon.ContextMenuStrip = contextMenu;
 
-                System.IO.File.AppendAllText(logPath, "Starting UI...\n");
+                Log("Starting UI...\n");
                 var viewModel = new X52ViewModel(_hidService, _vJoyService, _profileService!, settingsService);
                 _viewModel = viewModel;
                 var mainWindow = new MainWindow(viewModel);
-                System.IO.File.AppendAllText(logPath, "Showing MainWindow...\n");
+                Log("Showing MainWindow...\n");
 
                 MainWindow = mainWindow;
                 mainWindow.Show();
 
-                System.IO.File.AppendAllText(logPath, "Startup Completed Successfully.\n");
+                Log("Startup Completed Successfully.\n");
             }
             catch (Exception ex)
             {
                 string error = $"FATAL ERROR:\n{ex.Message}\n{ex.StackTrace}\n";
-                System.IO.File.AppendAllText(logPath, error);
+                Log(error);
                 System.Windows.MessageBox.Show(error, "X52 Driver Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 System.Windows.Application.Current.Shutdown();
             }

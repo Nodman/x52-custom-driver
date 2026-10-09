@@ -16,6 +16,10 @@ namespace X52.CustomDriver.Core.Services
         /// <summary>Set when the settings file had to be recovered at startup (shown to the user).</summary>
         public string? LoadNotice { get; private set; }
 
+        /// <summary>Raised with a user-facing message when saving fails; Saved when it works again.</summary>
+        public event EventHandler<string>? SaveFailed;
+        public event EventHandler? Saved;
+
         public SettingsService()
         {
             string appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
@@ -37,9 +41,13 @@ namespace X52.CustomDriver.Core.Services
             try
             {
                 SafeJsonFile.Save(_settingsPath, _settings);
-                ApplyStartupSetting();
+                Saved?.Invoke(this, EventArgs.Empty);
             }
-            catch (Exception ex) { Console.WriteLine($"[ERROR] Failed to save settings: {ex.Message}"); }
+            catch (Exception ex)
+            {
+                SaveFailed?.Invoke(this, $"Couldn't save settings to {_settingsPath}: {ex.Message}");
+            }
+            ApplyStartupSetting();
         }
 
         private void ApplyStartupSetting()

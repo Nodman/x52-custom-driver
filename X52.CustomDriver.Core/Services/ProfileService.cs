@@ -28,10 +28,17 @@ namespace X52.CustomDriver.Core.Services
         /// <summary>Set when the profiles file had to be recovered at startup (shown to the user).</summary>
         public string? LoadNotice { get; private set; }
 
+        /// <summary>Raised with a user-facing message when saving fails; Saved when it works again.</summary>
+        public event EventHandler<string>? SaveFailed;
+        public event EventHandler? Saved;
+
+        public string ProfilesPath => _profilesPath;
+
         public ProfileService()
         {
-            _profilesPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "profiles.json");
+            _profilesPath = ChooseProfilesPath(out string? folderNotice);
             LoadProfiles();
+            if (folderNotice != null) LoadNotice = LoadNotice == null ? folderNotice : LoadNotice + " " + folderNotice;
 
             if (!_profiles.Any())
             {
@@ -84,13 +91,53 @@ namespace X52.CustomDriver.Core.Services
                         m.Action = m.EffectiveAction;
         }
 
-        public void SaveProfiles()
+        public bool SaveProfiles()
         {
             try
             {
                 SafeJsonFile.Save(_profilesPath, _profiles);
+                Saved?.Invoke(this, EventArgs.Empty);
+                return true;
             }
-            catch (Exception ex) { Console.WriteLine($"[ERROR] Failed to save profiles: {ex.Message}"); }
+            catch (Exception ex)
+            {
+                SaveFailed?.Invoke(this, $"Couldn't save profiles to {_profilesPath}: {ex.Message} Your changes are still active and will be saved on the next save.");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// profiles.json lives next to the exe (so the portable zip stays portable). If that folder
+        /// isn't writable (e.g. unzipped into Program Files), use %LocalAppData%\AerakonX52Driver instead,
+        /// starting from the copy next to the exe if there is one.
+        /// </summary>
+        private static string ChooseProfilesPath(out string? notice)
+        {
+            notice = null;
+            string exeDir = AppDomain.CurrentDomain.BaseDirectory;
+            string local = Path.Combine(exeDir, "profiles.json");
+            if (IsFolderWritable(exeDir)) return local;
+
+            string fallbackDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AerakonX52Driver");
+            Directory.CreateDirectory(fallbackDir);
+            string fallback = Path.Combine(fallbackDir, "profiles.json");
+            if (!File.Exists(fallback) && File.Exists(local))
+            {
+                try { File.Copy(local, fallback); } catch { }
+            }
+            notice = $"The driver's folder ({exeDir.TrimEnd('\\')}) is read-only, so profiles are saved in {fallbackDir}.";
+            return fallback;
+        }
+
+        private static bool IsFolderWritable(string dir)
+        {
+            try
+            {
+                string probe = Path.Combine(dir, $".write-test-{Guid.NewGuid():N}");
+                using (new FileStream(probe, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1, FileOptions.DeleteOnClose)) { }
+                return true;
+            }
+            catch { return false; }
         }
 
         private void CreateDefaultProfiles()
