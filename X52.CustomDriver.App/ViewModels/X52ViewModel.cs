@@ -533,27 +533,11 @@ namespace X52.CustomDriver.App.ViewModels
         /// so every physical button has a fixed number. Buttons 33-64 / 65-96 repeat this list
         /// for modes 2 / 3 when "mode dial shifts buttons" is on.
         /// </summary>
-        public static readonly string[] VJoyButtonLayout =
-        {
-            "Trigger", "ButtonFire", "ButtonA", "ButtonB", "ButtonC", "Pinkie", "ButtonD", "ButtonE",
-            "T1", "T2", "T3", "T4", "T5", "T6", "TriggerStage2",
-            "Hat1Up", "Hat1Right", "Hat1Down", "Hat1Left",
-            "HatRearUp", "HatRearRight", "HatRearDown", "HatRearLeft",
-            "ClutchButton", "MfdFunction", "MfdStartStop", "MfdReset",
-            "MouseLeftClick", "MouseWheelClick", "MouseWheelDown", "MouseWheelUp"
-        };
+        public static readonly string[] VJoyButtonLayout = ButtonCatalog.VJoyButtons.Select(b => b.Id).ToArray();
         private const int ButtonsPerBank = 32;
 
         /// <summary>Friendly names, same order as <see cref="VJoyButtonLayout"/>.</summary>
-        public static readonly string[] VJoyButtonLabels =
-        {
-            "Trigger", "Fire", "A", "B", "C", "Pinky", "D", "E",
-            "T1", "T2", "T3", "T4", "T5", "T6", "Trigger full",
-            "Hat 1 Up", "Hat 1 Right", "Hat 1 Down", "Hat 1 Left",
-            "Index hat Back", "Index hat Right", "Index hat Down", "Index hat Left",
-            "i", "Function", "Start / Stop", "Reset",
-            "Mouse button", "Wheel press", "Wheel down", "Wheel up"
-        };
+        public static readonly string[] VJoyButtonLabels = ButtonCatalog.VJoyButtons.Select(b => b.Label).ToArray();
 
         /// <summary>First vJoy button number of the bank in use (0 for mode 1 or when banks are off).</summary>
         private int BankOffset(int mode) =>

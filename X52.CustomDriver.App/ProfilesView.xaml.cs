@@ -21,17 +21,8 @@ namespace X52.CustomDriver.App
         private X52Profile? _selected;
         private readonly DispatcherTimer _saveTimer = new() { Interval = TimeSpan.FromMilliseconds(600) };
 
-        public List<string> AvailableButtons { get; } = new()
-        {
-            "Trigger", "TriggerStage2", "Pinkie", "ButtonFire", "ButtonA", "ButtonB", "ButtonC", "ButtonD", "ButtonE",
-            "T1", "T2", "T3", "T4", "T5", "T6",
-            "Hat1Up", "Hat1Down", "Hat1Left", "Hat1Right",
-            "Hat2Up", "Hat2Down", "Hat2Left", "Hat2Right",
-            "HatRearUp", "HatRearDown", "HatRearLeft", "HatRearRight",
-            "Rotary1Min", "Rotary1Max", "Rotary2Min", "Rotary2Max", "SliderMin", "SliderMax",
-            "MfdFunction", "MfdStartStop", "MfdReset", "ClutchButton",
-            "MouseLeftClick", "MouseNubClick", "MouseWheelClick", "MouseWheelUp", "MouseWheelDown"
-        };
+        // Friendly names, same as the LIVE tab; profiles still store the button IDs
+        public IReadOnlyList<ButtonCatalog.ButtonInfo> AvailableButtons => ButtonCatalog.Mappable;
 
         public List<int> AvailableModes { get; } = new() { 0, 1, 2, 3 };
 

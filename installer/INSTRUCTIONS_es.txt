@@ -1,0 +1,50 @@
+﻿==============================================================================
+          ÆRAKON X52 DRIVER  –  fork de la comunidad, v1.4.0
+==============================================================================
+
+Driver de código abierto para el Saitek / Logitech X52 y X52 Pro, pensado
+para sustituir el antiguo software de Saitek (que choca con la Integridad de
+memoria de Windows 11).
+
+Este es un FORK del driver Ærakon X52 original de d2ndsky
+  original:  https://github.com/d2ndsky/x52-custom-driver
+  este fork: https://github.com/Nodman/x52-custom-driver
+
+Qué añade o corrige el fork
+  - Todos los botones se leen correctamente en el X52 y el X52 Pro.
+  - El mini-joystick del acelerador funciona como ratón (cursor, clic
+    izquierdo, clic central y rueda), configurable por perfil.
+    Activar/desactivar desde cualquier sitio: Ctrl+Alt+M.
+  - Perfiles con cambio automático según el juego, o manual: asignación de
+    teclas (Mantener / Pulsar / Alternar), curvas de ejes y ajustes de ratón.
+  - Editor de curvas con vista previa en vivo y vista en vivo de la palanca.
+  - Salida vJoy correcta: 31 botones por modo (3 bancos) y el hat de 8
+    direcciones como POV.
+  - Configuración de vJoy en un clic (128 botones + POV).
+  - Oculta el X52 real a los juegos con HidHide (sin entradas duplicadas).
+  - Desconexión / reconexión segura.
+
+------------------------------------------------------------------------------
+IMPRESCINDIBLE: vJoy
+------------------------------------------------------------------------------
+  Descarga: https://github.com/jshafer817/vJoy/releases  (2.1.9.1 o superior)
+
+Puedes instalar vJoy antes o después de este driver. Al final, el instalador
+comprueba si está instalado y puede abrir la página de descarga.
+
+------------------------------------------------------------------------------
+RECOMENDADO: HidHide
+------------------------------------------------------------------------------
+  Descarga: https://github.com/nefarius/HidHide/releases
+  (reinicia Windows después de instalarlo)
+
+------------------------------------------------------------------------------
+PRIMER INICIO
+------------------------------------------------------------------------------
+1. Abre "Ærakon x52 driver".
+2. Si vJoy aún no está configurado para el X52, el driver lo ofrece.
+3. Si HidHide está instalado, ofrece ocultar el X52 real.
+4. Pestaña PROFILES: asignaciones, curvas y ratón por juego.
+   Pestaña SETTINGS: vJoy, HidHide, orientación del mini-joystick, inicio.
+
+¡Disfruta del vuelo!

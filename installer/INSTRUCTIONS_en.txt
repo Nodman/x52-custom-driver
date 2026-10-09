@@ -1,0 +1,57 @@
+﻿==============================================================================
+              ÆRAKON X52 DRIVER  –  community fork, v1.4.0
+==============================================================================
+
+Open-source driver for the Saitek / Logitech X52 and X52 Pro, made to replace
+the old Saitek software (which conflicts with Windows 11 Memory Integrity).
+
+This is a FORK of the original Ærakon X52 driver by d2ndsky
+  original:  https://github.com/d2ndsky/x52-custom-driver
+  this fork: https://github.com/Nodman/x52-custom-driver
+
+What the fork adds or fixes
+  - Every button is read correctly on the X52 and X52 Pro (the original did
+    not read most stick buttons on the standard X52).
+  - The thumb stick on the throttle works as a mouse: cursor, left click,
+    middle click and scroll, each switchable per profile.
+    Emergency on/off from anywhere: Ctrl+Alt+M.
+  - Profiles that switch automatically with the running game, or manually:
+    key mappings (Hold / Tap / Toggle), axis curves and mouse settings.
+  - Axis curve editor (deadzone, curvature, saturation) with a live preview,
+    and a live top-down stick view.
+  - Proper vJoy output: 31 buttons per mode (mode dial = 3 button banks)
+    and the 8-way hat as a POV hat.
+  - One-click vJoy setup (128 buttons + POV hat).
+  - Hides the real X52 from games with HidHide, so inputs don't arrive twice.
+  - Safe unplug / replug: the cursor stops, keys are released, and the driver
+    reconnects by itself.
+
+------------------------------------------------------------------------------
+REQUIRED: vJoy (virtual joystick)
+------------------------------------------------------------------------------
+Games receive the X52 through vJoy. Without vJoy the driver can't work.
+
+  Download: https://github.com/jshafer817/vJoy/releases  (2.1.9.1 or newer)
+
+You can install vJoy before or after this driver. Setup checks for it at the
+end and can open the download page for you.
+
+------------------------------------------------------------------------------
+RECOMMENDED: HidHide
+------------------------------------------------------------------------------
+Hides the real X52 from games so they only see the virtual stick.
+
+  Download: https://github.com/nefarius/HidHide/releases
+  (restart Windows after installing it)
+
+------------------------------------------------------------------------------
+FIRST START
+------------------------------------------------------------------------------
+1. Start "Ærakon x52 driver".
+2. If vJoy isn't set up for the X52 yet, the driver offers to do it
+   (Windows asks for admin permission once).
+3. If HidHide is installed, the driver offers to hide the real X52.
+4. PROFILES tab: mappings, curves and thumb stick mouse settings per game.
+   SETTINGS tab: vJoy, HidHide, thumb stick orientation, startup options.
+
+Enjoy the flight!

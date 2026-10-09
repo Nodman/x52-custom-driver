@@ -1,4 +1,11 @@
-# Ærakon x52 driver (v1.1.7) 💎
+# Ærakon x52 driver – community fork (v1.4.0) 💎
+
+> **This is a fork** of [d2ndsky/x52-custom-driver](https://github.com/d2ndsky/x52-custom-driver).
+> It fixes button decoding (most stick buttons were never read on the standard X52), and adds:
+> thumb stick mouse, per-game profiles with Hold/Tap/Toggle key mappings, axis curves with live preview,
+> proper vJoy output (31 buttons × 3 mode banks + 8-way POV), one-click vJoy setup,
+> hiding the real X52 from games via HidHide, and safe unplug/replug.
+> Installers are built automatically by GitHub Actions from this repository's code.
 
 ![Æ52 Icon](app_icon.png)
 
@@ -47,7 +54,7 @@ The small rubber thumb stick on the throttle now works as a real Windows mouse, 
 
 ## 💻 Installation
 
-1. Download the latest `AerakonX52Driver_Setup_v1.1.7.exe` from the releases.
+1. Download the installer from the latest successful run under **Actions** (artifact *AerakonX52-installer*).
 2. Run the installer.
 3. Open the app and ensure the "vJoy Status" indicator is green.
 

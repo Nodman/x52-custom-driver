@@ -121,12 +121,18 @@
                                 <DataGridTemplateColumn Header="X52 Button" Width="200">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <TextBlock Text="{Binding ButtonName}" VerticalAlignment="Center" Padding="15,0" FontWeight="Bold" Foreground="White" FontSize="14"/>
+                                            <TextBlock Text="{Binding ButtonName, Converter={StaticResource ButtonLabel}}" VerticalAlignment="Center" Padding="15,0" FontWeight="Bold" Foreground="White" FontSize="14"/>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                     <DataGridTemplateColumn.CellEditingTemplate>
                                         <DataTemplate>
-                                            <ComboBox SelectedItem="{Binding ButtonName}" ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=local:ProfilesView}, Path=AvailableButtons}" Style="{StaticResource ExtremeVisibilityComboBox}" IsDropDownOpen="True"/>
+                                            <ComboBox SelectedValue="{Binding ButtonName}" SelectedValuePath="Id" ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=local:ProfilesView}, Path=AvailableButtons}" Style="{StaticResource ExtremeVisibilityComboBox}" IsDropDownOpen="True" MaxDropDownHeight="420">
+                                                <ComboBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding Label}"/>
+                                                    </DataTemplate>
+                                                </ComboBox.ItemTemplate>
+                                            </ComboBox>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellEditingTemplate>
                                 </DataGridTemplateColumn>

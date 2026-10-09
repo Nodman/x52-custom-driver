@@ -17,6 +17,8 @@ namespace X52.CustomDriver.App
 
         public static bool IsExiting { get; set; } = false;
 
+        public const string VJoyDownloadUrl = "https://github.com/jshafer817/vJoy/releases/latest";
+
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
@@ -45,7 +47,25 @@ namespace X52.CustomDriver.App
                 // Initialize vJoy and check for success
                 if (!_vJoyService.Initialize(1))
                 {
-                    System.Windows.MessageBox.Show("Could not initialize vJoy Device #1.\n\nPossible reasons:\n- vJoy is not installed.\n- vJoy Device #1 is not enabled in Configure vJoy.\n- Another application is using it exclusively.\n\nPlease install/configure vJoy from http://vjoystick.sourceforge.net", "vJoy Init Failed", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    bool vJoyInstalled = X52.CustomDriver.App.ViewModels.X52ViewModel.FindVJoyTool("vJoyConf.exe") != null;
+                    if (!vJoyInstalled)
+                    {
+                        var answer = System.Windows.MessageBox.Show(
+                            "vJoy is not installed.\n\nThis driver sends your X52 to games through the vJoy virtual joystick, so vJoy is required.\n\n" +
+                            "Open the vJoy download page now?\n\nAfter installing vJoy, start this driver again – it will offer to set vJoy up for the X52.",
+                            "vJoy is required", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                        if (answer == MessageBoxResult.Yes)
+                        {
+                            try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(VJoyDownloadUrl) { UseShellExecute = true }); } catch { }
+                        }
+                    }
+                    else
+                    {
+                        System.Windows.MessageBox.Show(
+                            "Could not use vJoy device #1.\n\nPossible reasons:\n- Device 1 is not enabled in Configure vJoy.\n- Another program (e.g. another feeder) is using it.\n\n" +
+                            "Open Configure vJoy, make sure device 1 is enabled, then restart this driver.",
+                            "vJoy device not available", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    }
                 }
 
                 _hidService.Initialize();

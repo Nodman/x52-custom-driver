@@ -22,6 +22,10 @@ namespace X52.CustomDriver.App
             InitializeComponent();
             DataContext = viewModel;
             ProfilesTab.Initialize(viewModel);
+
+            // Version comes from the project file (<Version>), so it's set in one place
+            var v = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version;
+            if (v != null) TitleText.Text = $"Ærakon x52 driver v{v.Major}.{v.Minor}.{v.Build}  ·  community fork";
             StickView.Initialize(viewModel);
             viewModel.RefreshHidHideStatus();
             UpdateHideButtons();
@@ -221,6 +225,22 @@ namespace X52.CustomDriver.App
             VJoyMessage.Foreground = error.Length == 0 ? System.Windows.Media.Brushes.LightGreen : System.Windows.Media.Brushes.IndianRed;
             VJoyMessage.Text = error.Length == 0 ? "✓ vJoy is set up: 128 buttons and the hat. Restart games that were running." : error;
             SetUpVJoyButton.IsEnabled = true;
+        }
+
+        private void OpenVJoyMonitor_Click(object sender, RoutedEventArgs e)
+        {
+            var exe = X52ViewModel.FindVJoyTool("JoyMonitor.exe");
+            if (exe == null)
+            {
+                VJoyMessage.Text = "vJoy Monitor wasn't found. It's an optional part of the vJoy installer (\"vJoy Monitoring application\").";
+                return;
+            }
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(exe) { UseShellExecute = true });
+                VJoyMessage.Text = "";
+            }
+            catch (Exception ex) { VJoyMessage.Text = ex.Message; }
         }
 
         private void OpenVJoyConf_Click(object sender, RoutedEventArgs e)
