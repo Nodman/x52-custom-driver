@@ -30,6 +30,19 @@ namespace X52.CustomDriver.Core.Services
 
         public bool IsConnected => _device != null && _device.IsOpen;
 
+        public string? DeviceInstanceId => DevicePathToInstanceId(_device?.DevicePath);
+
+        // \\?\hid#vid_06a3&pid_075c#7&1a2b&0&0000#{guid}  ->  HID\VID_06A3&PID_075C\7&1A2B&0&0000
+        public static string? DevicePathToInstanceId(string? path)
+        {
+            if (string.IsNullOrEmpty(path)) return null;
+            string p = path;
+            if (p.StartsWith(@"\\?\") || p.StartsWith(@"\\.\")) p = p.Substring(4);
+            var parts = p.Split('#');
+            if (parts.Length < 3) return null;
+            return string.Join(@"\", parts, 0, parts.Length - 1).ToUpperInvariant();
+        }
+
         public event EventHandler<X52State>? OnStateChanged;
         public event EventHandler<string>? OnError;
         public event EventHandler? OnDisconnected;

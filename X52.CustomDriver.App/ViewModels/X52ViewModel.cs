@@ -118,6 +118,89 @@ namespace X52.CustomDriver.App.ViewModels
             }
         }
 
+        // --- Hide the real X52 from games (HidHide) ---
+        public bool HidHideInstalled { get; private set; }
+        public bool HideRealX52Enabled => _settingsService.CurrentSettings.HideRealX52;
+        public string HideRealX52Status { get; private set; } = "";
+        public bool HideRealX52Busy { get; private set; }
+
+        /// <summary>Re-check HidHide and whether the stick on its current USB port is hidden.</summary>
+        public void RefreshHidHideStatus()
+        {
+            HidHideInstalled = HidHideManager.IsInstalled;
+            var cfg = _settingsService.CurrentSettings;
+            string? id = _hidService.DeviceInstanceId;
+
+            if (!HidHideInstalled)
+                HideRealX52Status = "HidHide is not installed. Install it, restart Windows, then come back here.";
+            else if (!cfg.HideRealX52)
+                HideRealX52Status = "Games can see the real X52 and the virtual stick (inputs arrive twice).";
+            else if (id == null)
+                HideRealX52Status = "On. Plug in the X52 to check it.";
+            else
+            {
+                bool? hidden = HidHideManager.IsHidden(id);
+                bool known = cfg.HiddenInstanceIds.Any(x => string.Equals(x, id, StringComparison.OrdinalIgnoreCase));
+                if (hidden == true || (hidden == null && known))
+                    HideRealX52Status = "✓ Hidden. Games only see the Ærakon virtual stick. (Restart games that were already running.)";
+                else
+                    HideRealX52Status = "⚠ The X52 is on a USB port that isn't hidden yet. Click HIDE again.";
+            }
+
+            OnPropertyChanged(nameof(HidHideInstalled));
+            OnPropertyChanged(nameof(HideRealX52Enabled));
+            OnPropertyChanged(nameof(HideRealX52Status));
+        }
+
+        public async Task<string> HideRealX52Async()
+        {
+            string? id = _hidService.DeviceInstanceId;
+            if (id == null) return "Plug in the X52 first.";
+
+            var cfg = _settingsService.CurrentSettings;
+            var ids = cfg.HiddenInstanceIds.Append(id).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+            SetBusy(true);
+            var (ok, message) = await HidHideManager.HideAsync(ids);
+            SetBusy(false);
+
+            if (ok)
+            {
+                cfg.HideRealX52 = true;
+                cfg.HiddenInstanceIds = ids;
+                _settingsService.SaveSettings();
+            }
+            RefreshHidHideStatus();
+            return ok ? "" : message;
+        }
+
+        public async Task<string> ShowRealX52Async()
+        {
+            var cfg = _settingsService.CurrentSettings;
+            var ids = cfg.HiddenInstanceIds.ToList();
+            string? id = _hidService.DeviceInstanceId;
+            if (id != null && !ids.Contains(id, StringComparer.OrdinalIgnoreCase)) ids.Add(id);
+
+            SetBusy(true);
+            var (ok, message) = ids.Count == 0 ? (true, "") : await HidHideManager.ShowAsync(ids);
+            SetBusy(false);
+
+            if (ok)
+            {
+                cfg.HideRealX52 = false;
+                cfg.HiddenInstanceIds.Clear();
+                _settingsService.SaveSettings();
+            }
+            RefreshHidHideStatus();
+            return ok ? "" : message;
+        }
+
+        private void SetBusy(bool busy)
+        {
+            HideRealX52Busy = busy;
+            OnPropertyChanged(nameof(HideRealX52Busy));
+        }
+
         public string NubDisplay => $"X {_nubMouse.RawX,3}   Y {_nubMouse.RawY,3}";
 
         public void ShutdownNubMouse()

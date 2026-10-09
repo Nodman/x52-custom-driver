@@ -9,6 +9,10 @@ namespace X52.CustomDriver.Core.Models
         public bool RunAtStartup { get; set; } = false;
         public bool UpgradeRequired { get; set; } = true;
 
+        // Real X52 hidden from games with HidHide; device instance IDs we added (one per USB port used)
+        public bool HideRealX52 { get; set; } = false;
+        public List<string> HiddenInstanceIds { get; set; } = new();
+
         // Thumb stick orientation (a property of the hardware, shared by all profiles)
         // NubMouseEnabled/Buttons/Speed/Deadzone are now per profile; these copies are only read
         // once to migrate settings from v1.1.9 into existing profiles.

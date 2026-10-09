@@ -23,6 +23,8 @@ namespace X52.CustomDriver.App
             DataContext = viewModel;
             ProfilesTab.Initialize(viewModel);
             StickView.Initialize(viewModel);
+            viewModel.RefreshHidHideStatus();
+            UpdateHideButtons();
 
             // Create the window handle now so the hotkey works even while the window is hidden in the tray
             var handle = new WindowInteropHelper(this).EnsureHandle();
@@ -87,6 +89,48 @@ namespace X52.CustomDriver.App
             ActiveProfileCombo.Items.Refresh();
             if (DataContext is X52ViewModel vm) ActiveProfileCombo.SelectedItem = vm.CurrentProfile;
         }
+
+        // --- Hide real X52 (HidHide) ---
+
+        private void MainTabs_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            // Only react to the tab control itself (child lists also raise SelectionChanged)
+            if (e.OriginalSource != MainTabs || DataContext is not X52ViewModel vm) return;
+            vm.RefreshHidHideStatus();
+            UpdateHideButtons();
+        }
+
+        private void UpdateHideButtons()
+        {
+            if (DataContext is not X52ViewModel vm) return;
+            bool busy = vm.HideRealX52Busy;
+            HideX52Button.IsEnabled = vm.HidHideInstalled && !busy;
+            HideX52Button.Content = vm.HideRealX52Enabled ? "HIDE AGAIN (THIS USB PORT)" : "HIDE REAL X52";
+            ShowX52Button.IsEnabled = vm.HidHideInstalled && vm.HideRealX52Enabled && !busy;
+            GetHidHideButton.Visibility = vm.HidHideInstalled ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        private async void HideX52_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is not X52ViewModel vm) return;
+            HideX52Message.Text = "Waiting for admin permission…";
+            HideX52Button.IsEnabled = ShowX52Button.IsEnabled = false;
+            string error = await vm.HideRealX52Async();
+            HideX52Message.Text = error;
+            UpdateHideButtons();
+        }
+
+        private async void ShowX52_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is not X52ViewModel vm) return;
+            HideX52Message.Text = "Waiting for admin permission…";
+            HideX52Button.IsEnabled = ShowX52Button.IsEnabled = false;
+            string error = await vm.ShowRealX52Async();
+            HideX52Message.Text = error;
+            UpdateHideButtons();
+        }
+
+        private void GetHidHide_Click(object sender, RoutedEventArgs e) => HidHideManager.OpenDownloadPage();
 
         private void RotateNub_Click(object sender, RoutedEventArgs e)
         {

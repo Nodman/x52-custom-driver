@@ -6,6 +6,9 @@ namespace X52.CustomDriver.Core.Interfaces
     public interface IHidService
     {
         bool IsConnected { get; }
+
+        // Windows device instance ID of the connected stick, e.g. HID\VID_06A3&PID_075C\7&1A2B3C&0&0000
+        string? DeviceInstanceId { get; }
         void Initialize();
         void StartListening();
         void StopListening();

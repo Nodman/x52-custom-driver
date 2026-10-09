@@ -20,6 +20,15 @@ namespace X52.CustomDriver.App
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+
+            // Started elevated just to change HidHide? Do that and exit without any UI.
+            if (HidHideManager.TryHandleCommandLine(e.Args, out int hidHideExit))
+            {
+                IsExiting = true;
+                Shutdown(hidHideExit);
+                return;
+            }
+
             string logPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "startup_log.txt");
             System.IO.File.WriteAllText(logPath, "--- Startup Log ---\n");
 

@@ -6,7 +6,7 @@
     xmlns:local="clr-namespace:X52.CustomDriver.App" mc:Ignorable="d" Title="Ærakon x52 driver" Height="720" Width="1080" ResizeMode="CanResizeWithGrip" WindowStyle="SingleBorderWindow" Background="#050505" Foreground="White" FontFamily="Segoe UI Semibold">
 
     <Grid Margin="20,10,20,20">
-        <TabControl x:Name="MainTabs">
+        <TabControl x:Name="MainTabs" SelectionChanged="MainTabs_SelectionChanged">
             <TabItem Header="LIVE">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <Grid>
@@ -16,7 +16,7 @@
                         </Grid.ColumnDefinitions>
 
                     <StackPanel Grid.Column="0">
-                        <TextBlock Text="Ærakon x52 driver v1.2.4" FontSize="20" FontWeight="Bold" Foreground="#00D2FF" Margin="0,0,0,20"/>
+                        <TextBlock Text="Ærakon x52 driver v1.3.0" FontSize="20" FontWeight="Bold" Foreground="#00D2FF" Margin="0,0,0,20"/>
 
                         <TextBlock Text="PRIMARY AXES" FontWeight="Bold" Margin="0,10,0,10" Foreground="#555"/>
                         <Grid>
@@ -241,6 +241,7 @@
                                     </Ellipse>
                                     <TextBlock Text="{Binding VJoyDeviceName}" FontSize="12"/>
                                 </StackPanel>
+                                <TextBlock Text="{Binding HideRealX52Status}" FontSize="10" Foreground="#666" TextWrapping="Wrap" Margin="0,8,0,0"/>
                             </StackPanel>
                         </Border>
 
@@ -301,7 +302,24 @@
             <TabItem Header="SETTINGS">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel MaxWidth="560" HorizontalAlignment="Left">
-                        <TextBlock Text="SYSTEM" Style="{StaticResource SectionHeader}" Margin="0,5,0,10"/>
+                        <TextBlock Text="HIDE REAL X52 FROM GAMES" Style="{StaticResource SectionHeader}" Margin="0,5,0,10"/>
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock FontSize="11" Foreground="#888" TextWrapping="Wrap" Margin="0,0,0,10"
+                                           Text="Without this, games see two joysticks: the real X52 and the Ærakon virtual stick, so every input arrives twice. HidHide hides the real X52 from every program except this driver."/>
+                                <TextBlock Text="{Binding HideRealX52Status}" FontSize="12" Foreground="#00D2FF" TextWrapping="Wrap" Margin="0,0,0,12"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button x:Name="HideX52Button" Content="HIDE REAL X52" Style="{StaticResource NeonButton}" Margin="0,0,10,0" Click="HideX52_Click"
+                                            ToolTip="Windows will ask for admin permission once"/>
+                                    <Button x:Name="ShowX52Button" Content="SHOW IT AGAIN" Style="{StaticResource DangerButton}" Margin="0,0,10,0" Click="ShowX52_Click"/>
+                                    <Button x:Name="GetHidHideButton" Content="GET HIDHIDE" Style="{StaticResource NeonButton}" Click="GetHidHide_Click"
+                                            ToolTip="Opens the official HidHide download page (free, by Nefarius)"/>
+                                </StackPanel>
+                                <TextBlock x:Name="HideX52Message" FontSize="11" Foreground="#FF5555" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Text="SYSTEM" Style="{StaticResource SectionHeader}"/>
                         <Border Style="{StaticResource Card}">
                             <StackPanel>
                                 <CheckBox IsChecked="{Binding RunAtStartup}" Content="Run at Windows startup" Style="{StaticResource NeonCheckBox}" Margin="0,0,0,10"/>

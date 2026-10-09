@@ -1,5 +1,5 @@
 #define MyAppName "Ærakon x52 driver"
-#define MyAppVersion "1.2.4"
+#define MyAppVersion "1.3.0"
 #define MyAppPublisher "Ærakon"
 #define MyAppURL "https://github.com/aera/x52-custom-driver"
 #define MyAppExeName "X52.CustomDriver.App.exe"
@@ -19,7 +19,7 @@ DefaultDirName={autopf}\{#MyAppName}
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 OutputDir=InstallerOutput
-OutputBaseFilename=AerakonX52Driver_Setup_v1.2.4
+OutputBaseFilename=AerakonX52Driver_Setup_v1.3.0
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern

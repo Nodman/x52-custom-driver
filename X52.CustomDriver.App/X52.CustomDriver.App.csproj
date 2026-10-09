@@ -5,6 +5,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Hide the real X52 from games via HidHide (https://github.com/nefarius/HidHide) -->
+    <PackageReference Include="Nefarius.Drivers.HidHide" Version="3.4.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="app.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
