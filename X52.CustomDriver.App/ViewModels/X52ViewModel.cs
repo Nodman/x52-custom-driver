@@ -585,6 +585,9 @@ namespace X52.CustomDriver.App.ViewModels
             }
         }
 
+        /// <summary>Current stick-top hat direction (degrees, -1 = centred), for the LIVE tab.</summary>
+        public int PovDirection => HatDirection(State);
+
         /// <summary>Stick-top hat (8-way) as degrees clockwise from up, or -1 when centred.</summary>
         private static int HatDirection(X52State s)
         {

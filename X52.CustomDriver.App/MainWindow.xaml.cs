@@ -27,6 +27,7 @@ namespace X52.CustomDriver.App
             var v = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version;
             if (v != null) TitleText.Text = $"Ærakon x52 driver v{v.Major}.{v.Minor}.{v.Build}  ·  community fork";
             StickView.Initialize(viewModel);
+            PovIndicator.Initialize(viewModel);
             viewModel.RefreshHidHideStatus();
             UpdateHideButtons();
 

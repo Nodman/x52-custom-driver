@@ -1,0 +1,16 @@
+<UserControl x:Class="X52.CustomDriver.App.PovView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Foreground="White">
+    <!-- 8-way hat on top of the stick, as sent to vJoy POV 1 -->
+    <StackPanel Orientation="Horizontal">
+        <Border Background="#0A0A0A" BorderBrush="#222" BorderThickness="1" CornerRadius="6" Padding="6">
+            <Canvas x:Name="PovCanvas" Width="90" Height="90"/>
+        </Border>
+        <StackPanel VerticalAlignment="Center" Margin="12,0,0,0">
+            <TextBlock Text="POV HAT" FontSize="11" Foreground="#888" FontWeight="Bold"/>
+            <TextBlock x:Name="DirectionText" FontSize="13" Foreground="#00D2FF" Margin="0,4,0,0"/>
+            <TextBlock x:Name="AngleText" FontSize="10" FontFamily="Consolas" Foreground="#555" Margin="0,2,0,0"/>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

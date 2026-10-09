@@ -24,7 +24,7 @@
     <ApplicationIcon>app.ico</ApplicationIcon>
     <UseWindowsForms>true</UseWindowsForms>
     <!-- Keep in sync with MyAppVersion in setup.iss -->
-    <Version>1.4.0</Version>
+    <Version>1.4.1</Version>
     <Product>Ærakon x52 driver</Product>
     <Title>Ærakon x52 driver</Title>
     <Authors>Ærakon</Authors>

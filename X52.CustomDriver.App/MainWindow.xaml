@@ -37,6 +37,8 @@
 
                                 <TextBlock Text="Z AXIS (Rudder)" Style="{StaticResource AxisLabel}"/>
                                 <ProgressBar Style="{StaticResource NeonProgressBar}" Value="{Binding ZPercent, Mode=OneWay}"/>
+
+                                <local:PovView x:Name="PovIndicator" Margin="0,22,0,0"/>
                             </StackPanel>
                         </Grid>
 
