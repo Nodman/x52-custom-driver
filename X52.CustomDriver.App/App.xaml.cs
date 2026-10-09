@@ -17,6 +17,12 @@ namespace X52.CustomDriver.App
 
         public static bool IsExiting { get; set; } = false;
 
+        // One driver per Windows user session. The installer uses the same name (AppMutex in setup.iss).
+        private const string InstanceMutexName = "AerakonX52Driver";
+        private const string ShowEventName = "AerakonX52Driver.ShowWindow";
+        private static System.Threading.Mutex? _instanceMutex;
+        private static System.Threading.EventWaitHandle? _showEvent;
+
         // Startup log next to the exe, or in %LocalAppData% when that folder is read-only. Never throws.
         private static string _logPath = "";
         internal static void Log(string line, bool overwrite = false)
@@ -49,6 +55,31 @@ namespace X52.CustomDriver.App
                 Shutdown(hidHideExit);
                 return;
             }
+
+            // Already running (e.g. hidden in the tray)? Bring that window up instead of starting a
+            // second copy, which would move the cursor twice as fast and send every key twice.
+            _instanceMutex = new System.Threading.Mutex(true, InstanceMutexName, out bool firstInstance);
+            if (!firstInstance)
+            {
+                try
+                {
+                    using var show = System.Threading.EventWaitHandle.OpenExisting(ShowEventName);
+                    show.Set();
+                }
+                catch { /* the other copy is still starting up */ }
+                IsExiting = true;
+                Shutdown(0);
+                return;
+            }
+            _showEvent = new System.Threading.EventWaitHandle(false, System.Threading.EventResetMode.AutoReset, ShowEventName);
+            new System.Threading.Thread(() =>
+            {
+                while (true)
+                {
+                    _showEvent.WaitOne();
+                    Dispatcher.BeginInvoke(new Action(ShowMainWindow));
+                }
+            }) { IsBackground = true, Name = "ShowWindowSignal" }.Start();
 
             _logPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "startup_log.txt");
             Log("--- Startup Log ---", overwrite: true);

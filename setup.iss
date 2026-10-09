@@ -10,7 +10,9 @@
 #define ConsoleBuildPath "X52.CustomDriver.Console\bin\Release\net9.0-windows\win-x64\publish"
 
 [Setup]
-; (No changes to Setup section)
+; Same name as the driver's single-instance mutex: setup asks to close a running driver
+; instead of failing with "file in use" when it sits in the tray
+AppMutex=AerakonX52Driver
 AppId={{D3F7D5C2-4E8F-4B9A-9C7D-2E5F8A1B3C4D}}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
