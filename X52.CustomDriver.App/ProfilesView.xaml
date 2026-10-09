@@ -71,6 +71,7 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" Margin="0,0,10,0">
                     <TextBlock Text="PROFILE NAME" Foreground="#888" FontSize="11" Margin="0,0,0,5"/>
@@ -85,6 +86,9 @@
                 <Button Grid.Column="2" x:Name="MakeActiveButton" Content="MAKE ACTIVE" Style="{StaticResource NeonButton}"
                         Height="32" MinWidth="120" Margin="10,0,0,0" VerticalAlignment="Bottom" Click="MakeActive_Click"
                         ToolTip="Use this profile now. It stays until a game with its own profile starts or closes."/>
+                <Button Grid.Column="3" x:Name="SaveButton" Content="SAVE" Style="{StaticResource NeonButton}"
+                        Height="32" MinWidth="90" Margin="10,0,0,0" VerticalAlignment="Bottom" Click="Save_Click"
+                        ToolTip="Changes are also saved automatically"/>
             </Grid>
 
             <TabControl Grid.Row="1" Margin="0,15,0,0">

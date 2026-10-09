@@ -283,6 +283,7 @@ namespace X52.CustomDriver.App.ViewModels
                     OnPropertyChanged(nameof(IsVJoyActive));
                     OnPropertyChanged(nameof(RawDataString));
                     OnPropertyChanged(nameof(NubDisplay));
+                    OnPropertyChanged(nameof(HeldKeysText));
                     OnPropertyChanged(nameof(IsMode1));
                     OnPropertyChanged(nameof(IsMode2));
                     OnPropertyChanged(nameof(IsMode3));
@@ -389,6 +390,15 @@ namespace X52.CustomDriver.App.ViewModels
         }
 
         /// <summary>Let go of every key held by a mapping (profile switch, unplug, exit).</summary>
+        public string HeldKeysText
+        {
+            get
+            {
+                string keys = _keyboardService.HeldKeysText;
+                return keys.Length == 0 ? "none" : keys;
+            }
+        }
+
         public void ReleaseAllMappedKeys()
         {
             _heldMappings.Clear();

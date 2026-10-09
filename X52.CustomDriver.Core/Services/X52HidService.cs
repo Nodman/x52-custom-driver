@@ -318,6 +318,11 @@ namespace X52.CustomDriver.Core.Services
             }
             state.CurrentMode = detectedMode;
 
+            // Named buttons, hats and mode, decoded with the bit layout from libx52
+            // (https://github.com/nirenjan/libx52). The parsing above only covered part of the
+            // standard X52 and used wrong positions for most X52 Pro buttons.
+            DecodeButtons(d, state);
+
             // Only update Mouse axes for Pro model. Standard stays zeroed to avoid interference.
             if (_currentPid == PID_Pro)
             {
@@ -337,6 +342,48 @@ namespace X52.CustomDriver.Core.Services
             }
             
             return state;
+        }
+
+        private void DecodeButtons(byte[] d, X52State s)
+        {
+            bool pro = _currentPid == PID_Pro;
+            if (d.Length < (pro ? 15 : 14)) return;
+
+            ulong bits = 0;
+            for (int i = 0; i < 5; i++) bits |= (ulong)d[8 + i] << (8 * i);
+            bool B(int n) => ((bits >> n) & 1UL) != 0;
+
+            // Same on both models
+            s.Trigger = B(0); s.ButtonFire = B(1); s.ButtonA = B(2); s.ButtonB = B(3); s.ButtonC = B(4);
+            s.Pinkie = B(5); s.ButtonD = B(6); s.ButtonE = B(7);
+            s.T1 = B(8); s.T2 = B(9); s.T3 = B(10); s.T4 = B(11); s.T5 = B(12); s.T6 = B(13);
+            s.TriggerStage2 = B(14);
+            s.MouseNubClick = false; // the X52 has no separate thumb stick click
+
+            if (pro)
+            {
+                s.MouseLeftClick = B(15); s.MouseWheelDown = B(16); s.MouseWheelUp = B(17); s.MouseWheelClick = B(18);
+                s.Hat1Up = B(19); s.Hat1Right = B(20); s.Hat1Down = B(21); s.Hat1Left = B(22);
+                s.HatRearUp = B(23); s.HatRearRight = B(24); s.HatRearDown = B(25); s.HatRearLeft = B(26);
+                if (B(27)) s.CurrentMode = 1; else if (B(28)) s.CurrentMode = 2; else if (B(29)) s.CurrentMode = 3;
+                s.ClutchButton = B(30); s.MfdFunction = B(31); s.MfdStartStop = B(32); s.MfdReset = B(33);
+            }
+            else
+            {
+                s.Hat1Up = B(15); s.Hat1Right = B(16); s.Hat1Down = B(17); s.Hat1Left = B(18);
+                s.HatRearUp = B(19); s.HatRearRight = B(20); s.HatRearDown = B(21); s.HatRearLeft = B(22);
+                if (B(23)) s.CurrentMode = 1; else if (B(24)) s.CurrentMode = 2; else if (B(25)) s.CurrentMode = 3;
+                s.MfdFunction = B(26); s.MfdStartStop = B(27); s.MfdReset = B(28); s.ClutchButton = B(29);
+                s.MouseLeftClick = B(30); s.MouseWheelClick = B(31); s.MouseWheelDown = B(32); s.MouseWheelUp = B(33);
+            }
+
+            // 8-way POV hat on top of the stick: high nibble of the byte before the thumb stick.
+            // 0 = centred, 1 = up, then clockwise in 45° steps (2 = up-right ... 8 = up-left).
+            int hat = d[pro ? 13 : 12] >> 4;
+            s.Hat2Up = hat == 8 || hat == 1 || hat == 2;
+            s.Hat2Right = hat >= 2 && hat <= 4;
+            s.Hat2Down = hat >= 4 && hat <= 6;
+            s.Hat2Left = hat >= 6 && hat <= 8;
         }
 
         public void ResetCalibration()

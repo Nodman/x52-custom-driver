@@ -63,6 +63,50 @@ namespace X52.CustomDriver.Core.Services
         private readonly Dictionary<ushort, int> _holdCount = new();
         private readonly object _lock = new();
 
+        // Auto-repeat like a real keyboard: the last held non-modifier key repeats after a delay.
+        // (Windows does not auto-repeat injected keys, so without this a held key types only once.)
+        private const int RepeatDelayMs = 500;
+        private const int RepeatIntervalMs = 33;
+        private ushort _repeatVk;
+        private DateTime _repeatSince;
+        private static readonly HashSet<ushort> Modifiers = new() { 0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0x5B, 0x5C };
+
+        public KeyboardService()
+        {
+            var t = new System.Threading.Thread(RepeatLoop) { IsBackground = true, Name = "KeyRepeat" };
+            t.Start();
+        }
+
+        private void RepeatLoop()
+        {
+            while (true)
+            {
+                System.Threading.Thread.Sleep(RepeatIntervalMs);
+                INPUT? repeat = null;
+                lock (_lock)
+                {
+                    if (_repeatVk != 0 && _holdCount.ContainsKey(_repeatVk) &&
+                        (DateTime.UtcNow - _repeatSince).TotalMilliseconds >= RepeatDelayMs)
+                        repeat = MakeInput(_repeatVk, up: false);
+                }
+                if (repeat.HasValue) Send(new List<INPUT> { repeat.Value });
+            }
+        }
+
+        /// <summary>Keys currently held down by mappings, for display.</summary>
+        public string HeldKeysText
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    if (_holdCount.Count == 0) return "";
+                    var names = _holdCount.Keys.Select(vk => KeyMap.FirstOrDefault(kv => kv.Value == vk).Key ?? $"0x{vk:X2}");
+                    return string.Join(" + ", names);
+                }
+            }
+        }
+
         // Map of friendly names to Virtual Key codes
         private static readonly Dictionary<string, ushort> KeyMap = new Dictionary<string, ushort>(StringComparer.OrdinalIgnoreCase)
         {
@@ -98,6 +142,7 @@ namespace X52.CustomDriver.Core.Services
                     _holdCount.TryGetValue(vk, out int n);
                     _holdCount[vk] = n + 1;
                     if (n == 0) toSend.Add(MakeInput(vk, up: false));
+                    if (!Modifiers.Contains(vk)) { _repeatVk = vk; _repeatSince = DateTime.UtcNow; }
                 }
             }
             Send(toSend);
@@ -112,7 +157,12 @@ namespace X52.CustomDriver.Core.Services
                 foreach (var vk in Resolve(keys).AsEnumerable().Reverse())
                 {
                     if (!_holdCount.TryGetValue(vk, out int n) || n <= 0) continue;
-                    if (n == 1) { _holdCount.Remove(vk); toSend.Add(MakeInput(vk, up: true)); }
+                    if (n == 1)
+                    {
+                        _holdCount.Remove(vk);
+                        toSend.Add(MakeInput(vk, up: true));
+                        if (_repeatVk == vk) _repeatVk = 0;
+                    }
                     else _holdCount[vk] = n - 1;
                 }
             }
@@ -135,6 +185,7 @@ namespace X52.CustomDriver.Core.Services
             {
                 foreach (var vk in _holdCount.Keys) toSend.Add(MakeInput(vk, up: true));
                 _holdCount.Clear();
+                _repeatVk = 0;
             }
             Send(toSend);
         }

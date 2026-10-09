@@ -93,6 +93,19 @@ namespace X52.CustomDriver.App
             MakeActiveButton.Content = isActive ? "ACTIVE ✓" : "MAKE ACTIVE";
         }
 
+        private void Save_Click(object sender, RoutedEventArgs e)
+        {
+            CommitName();
+            // Finish any cell that is still being edited in the mappings table
+            MappingsGrid.CommitEdit(DataGridEditingUnit.Row, true);
+            SaveNow();
+
+            SaveButton.Content = "SAVED ✓";
+            var reset = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1.5) };
+            reset.Tick += (s, a) => { reset.Stop(); SaveButton.Content = "SAVE"; };
+            reset.Start();
+        }
+
         private void MakeActive_Click(object sender, RoutedEventArgs e)
         {
             if (_vm != null && _selected != null) _vm.ActivateProfile(_selected);
