@@ -388,16 +388,24 @@ namespace X52.CustomDriver.App.ViewModels
         {
             for (int i = 0; i < VJoyButtonLayout.Length; i++)
             {
-                PhysicalButtons.Add(new ButtonVisualState { Name = (i + 1).ToString() });
+                PhysicalButtons.Add(new ButtonVisualState { Name = $"{VJoyButtonLabels[i]} ({i + 1})" });
             }
         }
 
+        private int _shownOffset = -1;
+
         private void UpdatePhysicalButtons(X52State s)
         {
+            int offset = BankOffset(s.CurrentMode);
+            bool relabel = offset != _shownOffset;
+            _shownOffset = offset;
+
             for (int i = 0; i < _buttonNames.Length && i < PhysicalButtons.Count; i++)
             {
                 PhysicalButtons[i].IsPressed = GetButtonState(s, _buttonNames[i]);
+                if (relabel) PhysicalButtons[i].Name = $"{VJoyButtonLabels[i]} ({offset + i + 1})";
             }
+            if (relabel) OnPropertyChanged(nameof(ButtonBankText));
         }
 
         // Mappings whose keys are currently held down, with the exact keys that were pressed
@@ -535,6 +543,32 @@ namespace X52.CustomDriver.App.ViewModels
             "MouseLeftClick", "MouseWheelClick", "MouseWheelDown", "MouseWheelUp"
         };
         private const int ButtonsPerBank = 32;
+
+        /// <summary>Friendly names, same order as <see cref="VJoyButtonLayout"/>.</summary>
+        public static readonly string[] VJoyButtonLabels =
+        {
+            "Trigger", "Fire", "A", "B", "C", "Pinky", "D", "E",
+            "T1", "T2", "T3", "T4", "T5", "T6", "Trigger full",
+            "Hat 1 Up", "Hat 1 Right", "Hat 1 Down", "Hat 1 Left",
+            "Index hat Back", "Index hat Right", "Index hat Down", "Index hat Left",
+            "i", "Function", "Start / Stop", "Reset",
+            "Mouse button", "Wheel press", "Wheel down", "Wheel up"
+        };
+
+        /// <summary>First vJoy button number of the bank in use (0 for mode 1 or when banks are off).</summary>
+        private int BankOffset(int mode) =>
+            _settingsService.CurrentSettings.ModeShiftsButtons ? (Math.Clamp(mode, 1, 3) - 1) * ButtonsPerBank : 0;
+
+        public string ButtonBankText
+        {
+            get
+            {
+                if (!_settingsService.CurrentSettings.ModeShiftsButtons)
+                    return "vJoy buttons 1–31 in every mode";
+                int off = BankOffset(State.CurrentMode);
+                return $"Mode {Math.Clamp(State.CurrentMode, 1, 3)} → vJoy buttons {off + 1}–{off + VJoyButtonLayout.Length}";
+            }
+        }
 
         private readonly bool[] _vjoyPressed = new bool[129];
 
@@ -687,6 +721,8 @@ namespace X52.CustomDriver.App.ViewModels
                 for (int n = 1; n <= 128; n++) SetVJoyButton(n, false);
                 _settingsService.CurrentSettings.ModeShiftsButtons = value;
                 _settingsService.SaveSettings();
+                _shownOffset = -1;
+                UpdatePhysicalButtons(State);
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(VJoyInfoText));
                 OnPropertyChanged(nameof(VJoyNeedsSetup));
@@ -742,13 +778,13 @@ namespace X52.CustomDriver.App.ViewModels
         public string Name
         {
             get => _name;
-            set { _name = value; OnPropertyChanged(); }
+            set { if (_name == value) return; _name = value; OnPropertyChanged(); }
         }
 
         public bool IsPressed
         {
             get => _isPressed;
-            set { _isPressed = value; OnPropertyChanged(); }
+            set { if (_isPressed == value) return; _isPressed = value; OnPropertyChanged(); }
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
