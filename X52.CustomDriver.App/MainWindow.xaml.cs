@@ -26,6 +26,14 @@ namespace X52.CustomDriver.App
             viewModel.RefreshHidHideStatus();
             UpdateHideButtons();
 
+            // Offer to fix vJoy / hide the real X52 once the window is up
+            ContentRendered += async (s, e) =>
+            {
+                if (_startupChecksDone) return;
+                _startupChecksDone = true;
+                await RunStartupChecksAsync();
+            };
+
             // Create the window handle now so the hotkey works even while the window is hidden in the tray
             var handle = new WindowInteropHelper(this).EnsureHandle();
             _hwndSource = HwndSource.FromHwnd(handle);
@@ -88,6 +96,65 @@ namespace X52.CustomDriver.App
             // The profile list is a plain list: refresh so new/renamed profiles show up
             ActiveProfileCombo.Items.Refresh();
             if (DataContext is X52ViewModel vm) ActiveProfileCombo.SelectedItem = vm.CurrentProfile;
+        }
+
+        // --- Startup checks ---
+
+        private bool _startupChecksDone;
+
+        private async Task RunStartupChecksAsync()
+        {
+            if (DataContext is not X52ViewModel vm) return;
+            var cfg = vm.Settings.CurrentSettings;
+
+            // 1) vJoy device not set up for the X52
+            if (vm.IsVJoyActive && vm.VJoyNeedsSetup && X52ViewModel.FindVJoyTool("vJoyConfig.exe") != null
+                && cfg.DeclinedVJoySetupFor != vm.VJoySignature)
+            {
+                var answer = System.Windows.MessageBox.Show(this,
+                    vm.VJoyInfoText.Split("  →")[0] + "\n\n" +
+                    "For every X52 button, all three modes and the 8-way hat to reach your games, vJoy device 1 needs " +
+                    "128 buttons and a POV hat.\n\nSet up vJoy now? Windows will ask for admin permission once.",
+                    "Set up vJoy for the X52", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+                if (answer == MessageBoxResult.Yes)
+                {
+                    string error = await vm.SetUpVJoyAsync();
+                    System.Windows.MessageBox.Show(this,
+                        error.Length == 0 ? "vJoy is set up: 128 buttons and the 8-way hat." : error,
+                        "vJoy", MessageBoxButton.OK, error.Length == 0 ? MessageBoxImage.Information : MessageBoxImage.Warning);
+                }
+                else
+                {
+                    // Don't ask again unless the vJoy configuration changes (SETTINGS still has the button)
+                    cfg.DeclinedVJoySetupFor = vm.VJoySignature;
+                    vm.Settings.SaveSettings();
+                }
+            }
+
+            // 2) Real X52 still visible to games, and HidHide is available to hide it
+            await Task.Delay(1500); // give the stick a moment to connect
+            vm.RefreshHidHideStatus();
+            if (vm.HidHideInstalled && !vm.HideRealX52Enabled && vm.IsX52Connected && !cfg.DeclinedHideRealX52)
+            {
+                var answer = System.Windows.MessageBox.Show(this,
+                    "Games can see both the real X52 and the Ærakon virtual stick, so every input arrives twice.\n\n" +
+                    "Hide the real X52 from games now? Only this driver will still see it. Windows will ask for admin permission once.",
+                    "Hide the real X52 from games", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+                if (answer == MessageBoxResult.Yes)
+                {
+                    string error = await vm.HideRealX52Async();
+                    if (error.Length > 0)
+                        System.Windows.MessageBox.Show(this, error, "HidHide", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+                else
+                {
+                    cfg.DeclinedHideRealX52 = true;
+                    vm.Settings.SaveSettings();
+                }
+                UpdateHideButtons();
+            }
         }
 
         // --- Hide real X52 (HidHide) ---

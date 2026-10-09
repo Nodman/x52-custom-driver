@@ -658,6 +658,12 @@ namespace X52.CustomDriver.App.ViewModels
             return VJoyNeedsSetup ? "vJoyConfig ran but the device still reports too few buttons. Try Configure vJoy." : "";
         }
 
+        /// <summary>Short fingerprint of the current vJoy configuration (buttons/continuous POVs/4-way POVs).</summary>
+        public string VJoySignature => $"{_vJoyService.ButtonCount}/{_vJoyService.ContinuousPovCount}/{_vJoyService.DiscretePovCount}";
+
+        public SettingsService Settings => _settingsService;
+        public bool IsX52Connected => _hidService.IsConnected;
+
         public static string? FindVJoyTool(string exeName)
         {
             string pf = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);

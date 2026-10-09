@@ -13,6 +13,10 @@ namespace X52.CustomDriver.Core.Models
         // vJoy buttons 1-32 in mode 1, 33-64 in mode 2, 65-96 in mode 3 (like the original Saitek driver)
         public bool ModeShiftsButtons { get; set; } = true;
 
+        // Startup checks: remember a "No" so we don't ask again until something changes
+        public string? DeclinedVJoySetupFor { get; set; }   // vJoy config the user said No to, e.g. "18/0/1"
+        public bool DeclinedHideRealX52 { get; set; } = false;
+
         public bool HideRealX52 { get; set; } = false;
         public List<string> HiddenInstanceIds { get; set; } = new();
 
