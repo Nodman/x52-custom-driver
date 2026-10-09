@@ -420,7 +420,7 @@ namespace X52.CustomDriver.App.ViewModels
             {
                 var m = held.Key;
                 bool stillMapped = mappings.Contains(m);
-                bool isToggle = string.Equals(m.Action, "Toggle", StringComparison.OrdinalIgnoreCase);
+                bool isToggle = string.Equals(m.EffectiveAction, "Toggle", StringComparison.OrdinalIgnoreCase);
                 bool buttonDown = GetButtonState(State, m.ButtonName);
                 if (!stillMapped || (!isToggle && !buttonDown))
                 {
@@ -441,7 +441,7 @@ namespace X52.CustomDriver.App.ViewModels
                 bool prevState = GetButtonState(_prevState, mapping.ButtonName);
                 if (!currentState || prevState) continue; // only on the press edge
 
-                switch ((mapping.Action ?? "Hold").ToLowerInvariant())
+                switch (mapping.EffectiveAction.ToLowerInvariant())
                 {
                     case "tap":
                         _keyboardService.Tap(mapping.KeySequence);
@@ -462,11 +462,13 @@ namespace X52.CustomDriver.App.ViewModels
                         }
                         break;
 
+                    case "repeat":
                     default: // hold
                         if (!_heldMappings.ContainsKey(mapping))
                         {
                             var copy = mapping.KeySequence.ToList();
-                            _keyboardService.Press(copy);
+                            bool repeat = mapping.EffectiveAction.Equals("Repeat", StringComparison.OrdinalIgnoreCase);
+                            _keyboardService.Press(copy, autoRepeat: repeat);
                             _heldMappings[mapping] = copy;
                         }
                         break;
@@ -501,8 +503,10 @@ namespace X52.CustomDriver.App.ViewModels
                 var lines = new List<string>();
                 foreach (var held in _heldMappings)
                 {
-                    bool toggle = string.Equals(held.Key.Action, "Toggle", StringComparison.OrdinalIgnoreCase);
-                    lines.Add($"{(toggle ? "Toggle ON " : "Hold      ")}  {ButtonCatalog.Label(held.Key.ButtonName)} → {string.Join("+", held.Value)}");
+                    string action = held.Key.EffectiveAction;
+                    string label = action.Equals("Toggle", StringComparison.OrdinalIgnoreCase) ? "Toggle ON " :
+                                   action.Equals("Repeat", StringComparison.OrdinalIgnoreCase) ? "Repeat    " : "Hold      ";
+                    lines.Add($"{label}  {ButtonCatalog.Label(held.Key.ButtonName)} → {string.Join("+", held.Value)}");
                 }
                 if (_lastTapLine != null && (DateTime.UtcNow - _lastTapAt).TotalSeconds < 1.5)
                     lines.Add(_lastTapLine);

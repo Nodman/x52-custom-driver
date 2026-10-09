@@ -69,11 +69,18 @@ namespace X52.CustomDriver.Core.Models
         public string ButtonName { get; set; } = ""; // e.g. "Trigger", "ButtonD"
         public bool EnableVJoy { get; set; } = true;
         public List<string>? KeySequence { get; set; } // e.g. ["LSHIFT", "G"]
-        public bool IsToggle { get; set; } = false; // legacy, unused (see Action)
+        public bool IsToggle { get; set; } = false; // legacy (v1.1.8); only used to migrate old mappings
 
-        // "Hold": keys held while the button is held. "Tap": short press on button press.
-        // "Toggle": first press holds the keys, next press releases them.
-        public string Action { get; set; } = "Hold";
+        // "Hold":   keys held while the button is held (no auto-repeat; games read the key state)
+        // "Repeat": like Hold, plus keyboard-style auto-repeat (for menus / text fields)
+        // "Tap":    one short press when the button goes down
+        // "Toggle": first press holds the keys, next press releases them
+        // Null in mappings saved before v1.2.2: those were one-shot presses, so they count as Tap
+        // (or Toggle if the old IsToggle flag was set). See EffectiveAction / ProfileService load.
+        public string? Action { get; set; }
+
+        [System.Text.Json.Serialization.JsonIgnore]
+        public string EffectiveAction => string.IsNullOrWhiteSpace(Action) ? (IsToggle ? "Toggle" : "Tap") : Action!;
         public int Mode { get; set; } = 0; // 0 = All, 1, 2, 3
 
         [System.Text.Json.Serialization.JsonIgnore]

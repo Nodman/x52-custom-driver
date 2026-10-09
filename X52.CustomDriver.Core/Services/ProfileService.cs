@@ -61,9 +61,22 @@ namespace X52.CustomDriver.Core.Services
                 {
                     string json = File.ReadAllText(_profilesPath);
                     _profiles = JsonSerializer.Deserialize<List<X52Profile>>(json) ?? new List<X52Profile>();
+                    MigrateLoadedProfiles();
                 }
             }
             catch { _profiles = new List<X52Profile>(); }
+        }
+
+        /// <summary>
+        /// Mappings saved before v1.2.2 have no Action. They were one-shot presses, so make that explicit
+        /// (Tap, or Toggle when the old IsToggle flag was set) instead of turning them into Hold.
+        /// </summary>
+        private void MigrateLoadedProfiles()
+        {
+            foreach (var profile in _profiles)
+                foreach (var m in profile.Mappings)
+                    if (string.IsNullOrWhiteSpace(m.Action))
+                        m.Action = m.EffectiveAction;
         }
 
         public void SaveProfiles()
@@ -88,7 +101,7 @@ namespace X52.CustomDriver.Core.Services
                 Name = "DCS World", 
                 ProcessName = "DCS",
                 Mappings = new ObservableCollection<ButtonMapping> {
-                    new ButtonMapping { ButtonName = "ButtonD", KeySequence = new List<string>{"LSHIFT", "G"} }
+                    new ButtonMapping { ButtonName = "ButtonD", KeySequence = new List<string>{"LSHIFT", "G"}, Action = "Tap" }
                 }
             });
             // Wardogs: the game process runs behind Easy Anti-Cheat as WardogsClient-Win64-Shipping.exe

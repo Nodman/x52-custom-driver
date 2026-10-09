@@ -131,8 +131,11 @@ namespace X52.CustomDriver.Core.Services
         private static List<ushort> Resolve(IEnumerable<string> keys) =>
             keys.Select(k => KeyMap.TryGetValue(k, out var vk) ? vk : (ushort)0).Where(v => v != 0).ToList();
 
-        /// <summary>Press keys and keep them held (e.g. while a stick button is held).</summary>
-        public void Press(IEnumerable<string> keys)
+        /// <summary>
+        /// Press keys and keep them held (e.g. while a stick button is held).
+        /// With <paramref name="autoRepeat"/>, the last non-modifier key repeats like a real keyboard.
+        /// </summary>
+        public void Press(IEnumerable<string> keys, bool autoRepeat = false)
         {
             var toSend = new List<INPUT>();
             lock (_lock)
@@ -142,7 +145,7 @@ namespace X52.CustomDriver.Core.Services
                     _holdCount.TryGetValue(vk, out int n);
                     _holdCount[vk] = n + 1;
                     if (n == 0) toSend.Add(MakeInput(vk, up: false));
-                    if (!Modifiers.Contains(vk)) { _repeatVk = vk; _repeatSince = DateTime.UtcNow; }
+                    if (autoRepeat && !Modifiers.Contains(vk)) { _repeatVk = vk; _repeatSince = DateTime.UtcNow; }
                 }
             }
             Send(toSend);

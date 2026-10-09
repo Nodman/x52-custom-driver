@@ -26,7 +26,7 @@ namespace X52.CustomDriver.App
 
         public List<int> AvailableModes { get; } = new() { 0, 1, 2, 3 };
 
-        public List<string> AvailableActions { get; } = new() { "Hold", "Tap", "Toggle" };
+        public List<string> AvailableActions { get; } = new() { "Hold", "Repeat", "Tap", "Toggle" };
 
         public ProfilesView()
         {
@@ -247,7 +247,7 @@ namespace X52.CustomDriver.App
         private void AddMapping_Click(object sender, RoutedEventArgs e)
         {
             if (_selected == null) return;
-            var mapping = new ButtonMapping { ButtonName = "Trigger", KeySequence = new List<string> { "SPACE" } };
+            var mapping = new ButtonMapping { ButtonName = "Trigger", KeySequence = new List<string> { "SPACE" }, Action = "Hold" };
             _selected.Mappings.Add(mapping);
             MappingsGrid.SelectedItem = mapping;
             MappingsGrid.ScrollIntoView(mapping);
