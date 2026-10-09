@@ -10,6 +10,9 @@ namespace X52.CustomDriver.Core.Models
         public bool UpgradeRequired { get; set; } = true;
 
         // Real X52 hidden from games with HidHide; device instance IDs we added (one per USB port used)
+        // vJoy buttons 1-32 in mode 1, 33-64 in mode 2, 65-96 in mode 3 (like the original Saitek driver)
+        public bool ModeShiftsButtons { get; set; } = true;
+
         public bool HideRealX52 { get; set; } = false;
         public List<string> HiddenInstanceIds { get; set; } = new();
 

@@ -183,9 +183,13 @@
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <Border x:Name="MousePanel" Style="{StaticResource Card}" HorizontalAlignment="Left" Width="460" VerticalAlignment="Top">
                             <StackPanel>
-                                <CheckBox IsChecked="{Binding Enabled}" Content="Thumb stick moves the cursor" Style="{StaticResource NeonCheckBox}" Margin="0,0,0,10"/>
-                                <CheckBox IsChecked="{Binding Buttons}" Content="Mouse buttons and scroll" Style="{StaticResource NeonCheckBox}" Margin="0,0,0,18"
-                                          ToolTip="Throttle mouse button = left click, wheel press = middle click, scroll = wheel"/>
+                                <CheckBox IsChecked="{Binding Enabled}" Content="Thumb stick mouse ON (Ctrl+Alt+M)" Style="{StaticResource NeonCheckBox}" Margin="0,0,0,12" FontWeight="Bold"/>
+                                <StackPanel Margin="26,0,0,18" IsEnabled="{Binding Enabled}">
+                                    <CheckBox IsChecked="{Binding MoveCursor}" Content="Thumb stick moves the cursor" Style="{StaticResource NeonCheckBox}" Margin="0,0,0,8"/>
+                                    <CheckBox IsChecked="{Binding LeftClick}" Content="Mouse button next to the thumb stick = left click" Style="{StaticResource NeonCheckBox}" Margin="0,0,0,8"/>
+                                    <CheckBox IsChecked="{Binding MiddleClick}" Content="Wheel press = middle click" Style="{StaticResource NeonCheckBox}" Margin="0,0,0,8"/>
+                                    <CheckBox IsChecked="{Binding Scroll}" Content="Wheel = mouse scroll" Style="{StaticResource NeonCheckBox}"/>
+                                </StackPanel>
                                 <DockPanel Margin="0,0,0,15">
                                     <TextBlock Text="SPEED" VerticalAlignment="Center" FontSize="11" Foreground="#888" Width="80"/>
                                     <TextBlock Text="{Binding Speed, StringFormat=N0}" DockPanel.Dock="Right" VerticalAlignment="Center" FontSize="11" Foreground="#00D2FF" Margin="10,0,0,0" Width="40" TextAlignment="Right"/>

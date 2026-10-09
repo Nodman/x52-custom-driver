@@ -382,18 +382,11 @@ namespace X52.CustomDriver.App.ViewModels
 
         public System.Collections.ObjectModel.ObservableCollection<ButtonVisualState> PhysicalButtons { get; } = new();
 
-        private readonly string[] _buttonNames = { 
-            "Trigger", "ButtonFire", "ButtonA", "ButtonB", "ButtonC", "Pinkie", "ButtonD", "ButtonE", 
-            "T1", "T2", "T3", "T4", "T5", "T6", "TriggerStage2",
-            "Hat1Up", "Hat1Right", "Hat1Down", "Hat1Left",
-            "HatRearUp", "HatRearRight", "HatRearDown", "HatRearLeft",
-            "MfdFunction", "MfdStartStop", "MfdReset", "ClutchButton", "MouseLeftClick",
-            "Hat2Up", "Hat2Down", "Hat2Left", "Hat2Right"
-        };
+        private static string[] _buttonNames => VJoyButtonLayout;
 
         private void InitializeButtons()
         {
-            for (int i = 0; i < 32; i++)
+            for (int i = 0; i < VJoyButtonLayout.Length; i++)
             {
                 PhysicalButtons.Add(new ButtonVisualState { Name = (i + 1).ToString() });
             }
@@ -522,35 +515,100 @@ namespace X52.CustomDriver.App.ViewModels
             _vJoyService.SetRz(vR2);
             _vJoyService.SetSlider(vS);
             
-            // --- GHOSTBUSTER LOGIC (Synced & Fixed Botón 24) ---
-            if (s.RawData != null)
+            // --- Buttons and POV hat ---
+            UpdateVJoyButtons(s);
+            _vJoyService.SetPov(HatDirection(s));
+        }
+
+        /// <summary>
+        /// vJoy button numbers (1-based, per mode bank). Built from the decoded button states,
+        /// so every physical button has a fixed number. Buttons 33-64 / 65-96 repeat this list
+        /// for modes 2 / 3 when "mode dial shifts buttons" is on.
+        /// </summary>
+        public static readonly string[] VJoyButtonLayout =
+        {
+            "Trigger", "ButtonFire", "ButtonA", "ButtonB", "ButtonC", "Pinkie", "ButtonD", "ButtonE",
+            "T1", "T2", "T3", "T4", "T5", "T6", "TriggerStage2",
+            "Hat1Up", "Hat1Right", "Hat1Down", "Hat1Left",
+            "HatRearUp", "HatRearRight", "HatRearDown", "HatRearLeft",
+            "ClutchButton", "MfdFunction", "MfdStartStop", "MfdReset",
+            "MouseLeftClick", "MouseWheelClick", "MouseWheelDown", "MouseWheelUp"
+        };
+        private const int ButtonsPerBank = 32;
+
+        private readonly bool[] _vjoyPressed = new bool[129];
+
+        private void SetVJoyButton(int number, bool pressed)
+        {
+            if (number < 1 || number > 128 || number > Math.Max(_vJoyService.ButtonCount, 1)) return;
+            if (_vjoyPressed[number] == pressed) return; // only send changes
+            _vjoyPressed[number] = pressed;
+            _vJoyService.SetButton(number, pressed);
+        }
+
+        private void UpdateVJoyButtons(X52State s)
+        {
+            bool banks = _settingsService.CurrentSettings.ModeShiftsButtons;
+            int bank = banks ? Math.Clamp(s.CurrentMode, 1, 3) - 1 : 0;
+
+            // Buttons whose key mapping has the "vJoy" box unticked are not sent to vJoy
+            var suppressed = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var m in CurrentProfile.Mappings)
+                if (!m.EnableVJoy && (m.Mode == 0 || m.Mode == s.CurrentMode)) suppressed.Add(m.ButtonName);
+
+            for (int b = 0; b < 3; b++)
             {
-                 int vBtn = 1 + (s.CurrentMode - 1) * 32;
-                 
-                 for (int b = 8; b < Math.Min(s.RawData.Length, 12); b++)
-                 {
-                     for (int bit = 0; bit < 8; bit++)
-                     {
-                         // GHOSTBUSTER: Ignore internal Mode bits
-                         // B10 Bit 7 = Mode 1 (Standard)
-                         // B11 Bits 0 & 1 = Mode 2 & 3 (Standard)
-                         if ((b == 10 && bit == 7) || (b == 11 && (bit == 0 || bit == 1)))
-                         {
-                             vBtn++;
-                             continue;
-                         }
+                for (int i = 0; i < VJoyButtonLayout.Length; i++)
+                {
+                    int number = b * ButtonsPerBank + i + 1;
+                    bool pressed = b == bank && !suppressed.Contains(VJoyButtonLayout[i]) && GetButtonState(s, VJoyButtonLayout[i]);
+                    SetVJoyButton(number, pressed);
+                }
+            }
+        }
 
-                         if (vBtn <= 128)
-                             _vJoyService.SetButton(vBtn++, (s.RawData[b] & (1 << bit)) != 0);
-                     }
-                 }
+        /// <summary>Stick-top hat (8-way) as degrees clockwise from up, or -1 when centred.</summary>
+        private static int HatDirection(X52State s)
+        {
+            bool u = s.Hat2Up, r = s.Hat2Right, d = s.Hat2Down, l = s.Hat2Left;
+            if (u && r) return 45;
+            if (d && r) return 135;
+            if (d && l) return 225;
+            if (u && l) return 315;
+            if (u) return 0;
+            if (r) return 90;
+            if (d) return 180;
+            if (l) return 270;
+            return -1;
+        }
 
-                 // SILVER BULLET PHASE 2: Explicit Clean Mapping for Hat 2
-                 int baseId = 1 + (s.CurrentMode - 1) * 32;
-                 _vJoyService.SetButton(baseId + 28, s.Hat2Up);    // Button 29
-                 _vJoyService.SetButton(baseId + 29, s.Hat2Down);  // Button 30
-                 _vJoyService.SetButton(baseId + 30, s.Hat2Left);  // Button 31
-                 _vJoyService.SetButton(baseId + 31, s.Hat2Right); // Button 32
+        public string VJoyInfoText
+        {
+            get
+            {
+                if (!_vJoyService.IsAvailable) return "vJoy device #1 is not available. Install vJoy and enable device 1 in Configure vJoy.";
+                int buttons = _vJoyService.ButtonCount;
+                int cont = _vJoyService.ContinuousPovCount, disc = _vJoyService.DiscretePovCount;
+                string pov = cont > 0 ? $"{cont} continuous POV hat(s)" : disc > 0 ? $"{disc} 4-way POV hat(s)" : "no POV hat";
+                int needed = _settingsService.CurrentSettings.ModeShiftsButtons ? 3 * ButtonsPerBank : VJoyButtonLayout.Length;
+                string advice = buttons < needed || (cont == 0 && disc == 0)
+                    ? $"  → In Configure vJoy set device 1 to {(needed > 32 ? 128 : 32)} buttons and 1 continuous POV, then restart this driver."
+                    : "  ✓ Enough for every X52 button" + (cont > 0 ? " and the 8-way hat." : ".");
+                return $"vJoy device #1: {buttons} buttons, {pov}.{advice}";
+            }
+        }
+
+        public bool ModeShiftsButtons
+        {
+            get => _settingsService.CurrentSettings.ModeShiftsButtons;
+            set
+            {
+                // Release everything first so nothing stays pressed in the old layout
+                for (int n = 1; n <= 128; n++) SetVJoyButton(n, false);
+                _settingsService.CurrentSettings.ModeShiftsButtons = value;
+                _settingsService.SaveSettings();
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(VJoyInfoText));
             }
         }
 

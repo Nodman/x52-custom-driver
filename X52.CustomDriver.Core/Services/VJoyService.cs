@@ -1,6 +1,7 @@
 using System;
 using System.Reflection;
 using System.Linq;
+using System.Runtime.InteropServices;
 using X52.CustomDriver.Core.Interfaces;
 
 namespace X52.CustomDriver.Core.Services
@@ -23,6 +24,56 @@ namespace X52.CustomDriver.Core.Services
         private MethodInfo? _setSlider0Method;
         private MethodInfo? _setSlider1Method;
         private MethodInfo? _setDialMethod;
+
+        // Direct calls into vJoyInterface.dll (the same DLL the wrapper uses) for things the
+        // wrapper doesn't expose: POV hats and the configured button/POV counts.
+        [DllImport("vJoyInterface.dll", EntryPoint = "GetVJDButtonNumber")] private static extern int NativeButtonNumber(uint rID);
+        [DllImport("vJoyInterface.dll", EntryPoint = "GetVJDContPovNumber")] private static extern int NativeContPovNumber(uint rID);
+        [DllImport("vJoyInterface.dll", EntryPoint = "GetVJDDiscPovNumber")] private static extern int NativeDiscPovNumber(uint rID);
+        [DllImport("vJoyInterface.dll", EntryPoint = "SetContPov")] private static extern bool NativeSetContPov(int value, uint rID, uint nPov);
+        [DllImport("vJoyInterface.dll", EntryPoint = "SetDiscPov")] private static extern bool NativeSetDiscPov(int value, uint rID, uint nPov);
+
+        public int ButtonCount { get; private set; }
+        public int ContinuousPovCount { get; private set; }
+        public int DiscretePovCount { get; private set; }
+        private int _lastPov = int.MinValue;
+
+        public void SetPov(int direction)
+        {
+            if (!IsAvailable || direction == _lastPov) return;
+            _lastPov = direction;
+            try
+            {
+                if (ContinuousPovCount > 0)
+                {
+                    // Hundredths of a degree, -1 = centred
+                    NativeSetContPov(direction < 0 ? -1 : direction * 100, DeviceId, 1);
+                }
+                else if (DiscretePovCount > 0)
+                {
+                    // 4-way hat: 0 up, 1 right, 2 down, 3 left; diagonals fall back to the
+                    // cardinal direction just before them (counter-clockwise)
+                    int v = direction < 0 ? -1 : (direction / 90) % 4;
+                    NativeSetDiscPov(v, DeviceId, 1);
+                }
+            }
+            catch (Exception ex) { Console.WriteLine($"[VJoyService] SetPov failed: {ex.Message}"); }
+        }
+
+        private void ReadCapabilities()
+        {
+            try
+            {
+                ButtonCount = NativeButtonNumber(DeviceId);
+                ContinuousPovCount = NativeContPovNumber(DeviceId);
+                DiscretePovCount = NativeDiscPovNumber(DeviceId);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[VJoyService] Could not read vJoy capabilities: {ex.Message}");
+                ButtonCount = 32; // assume the common default
+            }
+        }
 
         public bool IsAvailable { get; private set; }
         public uint DeviceId { get; private set; }
@@ -103,6 +154,7 @@ namespace X52.CustomDriver.Core.Services
                                      
                                      CacheMethods();
                                      Reset();
+                                     ReadCapabilities();
                                      IsAvailable = true;
                                      Console.WriteLine($"[VJoyService] Device {DeviceId} Acquired.");
                                      return true;

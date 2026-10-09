@@ -36,12 +36,27 @@ namespace X52.CustomDriver.Core.Models
     public class ThumbMouseSettings : INotifyPropertyChanged
     {
         private bool _enabled = true;
-        private bool _buttons = true;
+        private bool _moveCursor = true;
+        private bool _leftClick = true;
+        private bool _middleClick = true;
+        private bool _scroll = true;
         private double _speed = 1200;
         private double _deadzone = 1.0;
 
+        // Master switch (Ctrl+Alt+M)
         public bool Enabled { get => _enabled; set { _enabled = value; OnPropertyChanged(nameof(Enabled)); } }
-        public bool Buttons { get => _buttons; set { _buttons = value; OnPropertyChanged(nameof(Buttons)); } }
+        public bool MoveCursor { get => _moveCursor; set { _moveCursor = value; OnPropertyChanged(nameof(MoveCursor)); } }
+        public bool LeftClick { get => _leftClick; set { _leftClick = value; OnPropertyChanged(nameof(LeftClick)); } }     // throttle mouse button
+        public bool MiddleClick { get => _middleClick; set { _middleClick = value; OnPropertyChanged(nameof(MiddleClick)); } } // wheel press
+        public bool Scroll { get => _scroll; set { _scroll = value; OnPropertyChanged(nameof(Scroll)); } }               // wheel up/down
+
+        // Old single "buttons" switch (v1.2.x). Only read from old files; never written.
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+        public bool? Buttons
+        {
+            get => null;
+            set { if (value.HasValue) { LeftClick = value.Value; MiddleClick = value.Value; Scroll = value.Value; } }
+        }
         public double Speed { get => _speed; set { _speed = value; OnPropertyChanged(nameof(Speed)); } }       // px/s at full deflection
         public double Deadzone { get => _deadzone; set { _deadzone = value; OnPropertyChanged(nameof(Deadzone)); } } // 0..4 nub units
 

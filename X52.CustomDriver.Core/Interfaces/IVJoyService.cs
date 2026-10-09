@@ -21,5 +21,13 @@ namespace X52.CustomDriver.Core.Interfaces
         void SetButton(int buttonId, bool pressed);
         void SetSlider(int value, int index = 0);
         void SetDial(int value);
+
+        // Capabilities of the vJoy device as configured in "Configure vJoy"
+        int ButtonCount { get; }
+        int ContinuousPovCount { get; }
+        int DiscretePovCount { get; }
+
+        /// <summary>Set POV hat 1. direction: -1 = centred, else degrees clockwise from up (0, 45, ... 315).</summary>
+        void SetPov(int direction);
     }
 }

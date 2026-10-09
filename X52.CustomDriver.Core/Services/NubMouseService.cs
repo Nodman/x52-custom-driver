@@ -30,7 +30,7 @@ namespace X52.CustomDriver.Core.Services
         private volatile ThumbMouseSettings _settings = new();
         public ThumbMouseSettings Settings { get => _settings; set => _settings = value ?? new ThumbMouseSettings(); }
         private bool Enabled => _settings.Enabled;
-        private bool ButtonsEnabled => _settings.Buttons;
+        private bool MoveEnabled => _settings.Enabled && _settings.MoveCursor;
         private double Speed => Math.Clamp(_settings.Speed, 50, 6000);
         private double Deadzone => Math.Clamp(_settings.Deadzone, 0, 4);
 
@@ -112,26 +112,28 @@ namespace X52.CustomDriver.Core.Services
         {
             lock (_buttonLock)
             {
-                if (!Enabled || !ButtonsEnabled)
-                {
-                    ReleaseButtons();
-                    _scrollUpPrev = scrollUp;
-                    _scrollDownPrev = scrollDown;
-                    return;
-                }
+                var cfg = _settings;
+                bool on = cfg.Enabled;
 
-                if (primary != _leftDown)
+                // Each mouse function can be switched on/off separately; a disabled one is released
+                bool left = on && cfg.LeftClick && primary;
+                bool middle = on && cfg.MiddleClick && secondary;
+
+                if (left != _leftDown)
                 {
-                    SendMouse(0, 0, 0, primary ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_LEFTUP);
-                    _leftDown = primary;
+                    SendMouse(0, 0, 0, left ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_LEFTUP);
+                    _leftDown = left;
                 }
-                if (secondary != _middleDown)
+                if (middle != _middleDown)
                 {
-                    SendMouse(0, 0, 0, secondary ? MOUSEEVENTF_MIDDLEDOWN : MOUSEEVENTF_MIDDLEUP);
-                    _middleDown = secondary;
+                    SendMouse(0, 0, 0, middle ? MOUSEEVENTF_MIDDLEDOWN : MOUSEEVENTF_MIDDLEUP);
+                    _middleDown = middle;
                 }
-                if (scrollUp && !_scrollUpPrev) SendMouse(0, 0, WHEEL_DELTA, MOUSEEVENTF_WHEEL);
-                if (scrollDown && !_scrollDownPrev) SendMouse(0, 0, unchecked((uint)-WHEEL_DELTA), MOUSEEVENTF_WHEEL);
+                if (on && cfg.Scroll)
+                {
+                    if (scrollUp && !_scrollUpPrev) SendMouse(0, 0, WHEEL_DELTA, MOUSEEVENTF_WHEEL);
+                    if (scrollDown && !_scrollDownPrev) SendMouse(0, 0, unchecked((uint)-WHEEL_DELTA), MOUSEEVENTF_WHEEL);
+                }
                 _scrollUpPrev = scrollUp;
                 _scrollDownPrev = scrollDown;
             }
@@ -169,10 +171,10 @@ namespace X52.CustomDriver.Core.Services
                 double dt = Math.Min(now - last, 0.05);
                 last = now;
 
-                if (!Enabled || !_hasData)
+                if (!Enabled) lock (_buttonLock) ReleaseButtons();
+                if (!MoveEnabled || !_hasData)
                 {
                     accX = accY = 0;
-                    if (!Enabled) lock (_buttonLock) ReleaseButtons();
                     continue;
                 }
 

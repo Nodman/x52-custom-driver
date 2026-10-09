@@ -132,6 +132,41 @@ namespace X52.CustomDriver.App
 
         private void GetHidHide_Click(object sender, RoutedEventArgs e) => HidHideManager.OpenDownloadPage();
 
+        // --- vJoy / Game Controllers ---
+
+        private void OpenJoyCpl_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("control.exe", "joy.cpl") { UseShellExecute = true });
+                VJoyMessage.Text = "";
+            }
+            catch (Exception ex) { VJoyMessage.Text = ex.Message; }
+        }
+
+        private void OpenVJoyConf_Click(object sender, RoutedEventArgs e)
+        {
+            string pf = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            string[] candidates =
+            {
+                System.IO.Path.Combine(pf, "vJoy", "x64", "vJoyConf.exe"),
+                System.IO.Path.Combine(pf, "vJoy", "vJoyConf.exe"),
+                System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "vJoy", "vJoyConf.exe")
+            };
+            var exe = candidates.FirstOrDefault(System.IO.File.Exists);
+            if (exe == null)
+            {
+                VJoyMessage.Text = "Configure vJoy wasn't found. Open it from the Start menu (search \"Configure vJoy\").";
+                return;
+            }
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(exe) { UseShellExecute = true });
+                VJoyMessage.Text = "After changing vJoy, restart this driver.";
+            }
+            catch (Exception ex) { VJoyMessage.Text = ex.Message; }
+        }
+
         private void RotateNub_Click(object sender, RoutedEventArgs e)
         {
             if (DataContext is X52ViewModel vm) vm.RotateNubMouse();
