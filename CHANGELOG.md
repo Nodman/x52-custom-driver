@@ -2,6 +2,25 @@
 
 Each `## vX.Y.Z` section below becomes the notes of the GitHub Release with that tag.
 
+## v1.4.7
+
+Safety and reliability release, after a full review of the fork.
+
+### Changed
+- **Profiles are saved with SAVE** (no more autosave). Edits still work immediately; a ● marks profiles with unsaved changes (profile list, LIVE picker, tray menu, PROFILES tab). New **REVERT** button. Closing the driver with unsaved changes asks Save / Don't save / Cancel. Creating, duplicating and deleting profiles is still saved right away.
+- **Ctrl+Alt+M** switches the thumb stick mouse on/off for the current session only; it no longer changes the profile.
+- **Key mappings**: *Hold* now really holds the keys (no auto-repeat; games read the key state). New *Repeat* action for keyboard-style auto-repeat. Mappings from the original driver (v1.1.8) stay one-shot taps (or toggles) instead of turning into Hold.
+- **vJoy setup asks** before changing vJoy device 1, and can instead create a **separate vJoy device just for the X52** (the default when device 1 is used by another program). The choice is remembered.
+
+### Fixes
+- **No more lost profiles**: profiles.json and settings.json are written safely (temp file + swap) with a `.bak` backup. A damaged file is kept as `*.corrupt-<time>.json` and the backup is used; you get a message.
+- **Save problems are shown** in a message bar instead of failing silently. If the driver's folder is read-only (e.g. portable copy in Program Files), profiles go to `%LocalAppData%\AerakonX52Driver`.
+- **HidHide**: uninstalling the driver makes the X52 visible to games again. If the driver was moved or reinstalled elsewhere and can't see the hidden X52, there is a **FIX ACCESS** button. HidHide's "inverted" mode is no longer switched silently; the driver asks first.
+- **Only one driver runs at a time**: starting it again shows the running window (and the installer asks to close it).
+- **Crash safety**: held keys and mouse buttons are released on any error, and errors are logged to `%LocalAppData%\AerakonX52Driver\crash.log`.
+- **X52 Pro**: stick X/Y read with the Pro's 10-bit layout (from libx52). *Not tested on a real X52 Pro yet; please report how it works.* The connected model is shown on the LIVE tab. Standard X52: twist no longer picks up two wrong bits.
+- Mouse wheel up/down now show up as buttons (in vJoy and for key mappings). The mode is kept while the mode dial is between positions. The first X52 revision (PID 0255) is recognised.
+
 ## v1.4.6
 
 First release of the community fork of [d2ndsky/x52-custom-driver](https://github.com/d2ndsky/x52-custom-driver) (based on its v1.1.8).

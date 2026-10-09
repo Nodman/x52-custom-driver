@@ -33,7 +33,7 @@ A modern, high-performance, and open-source driver for the **Logitech/Saitek X52
 
 The window now has three tabs: **LIVE** (axes, buttons, status), **PROFILES** and **SETTINGS**.
 Each profile has its own button mappings, axis curves (deadzone, curvature, saturation, invert for stick X/Y and twist) and thumb stick mouse settings,
-and switches on automatically when its game .exe is running. Everything is saved automatically.
+and switches on automatically when its game .exe is running. Edits work immediately; press **SAVE** to keep them (a ● marks unsaved profiles).
 
 ## 🖱️ Thumb Stick Mouse
 
@@ -41,7 +41,7 @@ The small rubber thumb stick on the throttle now works as a real Windows mouse, 
 
 - Thumb stick moves the cursor (adjustable speed and deadzone)
 - Throttle mouse button = left click, wheel press = middle click, scroll wheel = mouse wheel
-- Can be switched off in the **THUMB STICK MOUSE** panel, or from anywhere with **Ctrl+Alt+M**
+- Can be switched off in the **THUMB STICK MOUSE** panel, or from anywhere with **Ctrl+Alt+M** (for the current session; the profile setting is unchanged)
 - Unplugging the stick stops the cursor and releases buttons; the driver reconnects automatically when it is plugged back in
 - Raise the deadzone if a worn thumb stick makes the cursor drift on its own
 
