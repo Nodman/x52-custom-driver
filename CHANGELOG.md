@@ -2,6 +2,12 @@
 
 Each `## vX.Y.Z` section below becomes the notes of the GitHub Release with that tag.
 
+## v1.4.8
+
+### Fixes
+- **vJoy name**: after SET UP VJOY, Game Controllers showed every vJoy device as plain "vJoy Device". Windows resets the name when vJoy rebuilds its devices; the driver now puts "Ærakon X52 Virtual Joystick" back (right after setup and on every start). Windows keeps one name for all vJoy devices, so every vJoy device carries it.
+- The LIVE tab shows which vJoy device the X52 uses, e.g. "Ærakon X52 Virtual Joystick (vJoy device #2)".
+
 ## v1.4.7
 
 Safety and reliability release, after a full review of the fork.

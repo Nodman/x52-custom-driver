@@ -9,6 +9,9 @@ namespace X52.CustomDriver.Core.Interfaces
         string DeviceName { get; }
         
         bool Initialize(uint deviceId);
+
+        /// <summary>Give vJoy devices the "Ærakon X52 Virtual Joystick" name again if Windows reset it.</summary>
+        void EnsureBrandName();
         void Shutdown();
         
         void SetAxisX(int value);

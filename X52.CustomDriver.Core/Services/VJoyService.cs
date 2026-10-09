@@ -80,15 +80,19 @@ namespace X52.CustomDriver.Core.Services
             catch (Exception ex) { Console.WriteLine($"[VJoyService] SetPov failed: {ex.Message}"); }
         }
 
-        // The vJoy installer clears the device name; put "Ærakon X52 Virtual Joystick" back if it's missing
+        // Name shown in Game Controllers and games. Windows keeps one name for VID 1234 / PID BEAD,
+        // so it applies to every vJoy device. Installing or reconfiguring vJoy (vJoyConfig) makes
+        // Windows rebuild the entry, either empty or as the default "vJoy Device": put ours back then.
+        public const string BrandName = "Ærakon X52 Virtual Joystick";
         private const string OemKey = @"System\CurrentControlSet\Control\MediaProperties\PrivateProperties\Joystick\OEM\VID_1234&PID_BEAD";
-        private static void EnsureBrandName()
+        public void EnsureBrandName()
         {
             try
             {
                 using var key = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(OemKey);
-                if (string.IsNullOrEmpty(key?.GetValue("OEMName") as string))
-                    key?.SetValue("OEMName", "Ærakon X52 Virtual Joystick");
+                string? current = key?.GetValue("OEMName") as string;
+                if (string.IsNullOrEmpty(current) || current.Trim().Equals("vJoy Device", StringComparison.OrdinalIgnoreCase))
+                    key?.SetValue("OEMName", BrandName);
             }
             catch { /* cosmetic only */ }
         }
@@ -119,10 +123,10 @@ namespace X52.CustomDriver.Core.Services
                     // vJoy VID/PID is 1234/BEAD. Windows stores the name in the registry.
                     using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"System\CurrentControlSet\Control\MediaProperties\PrivateProperties\Joystick\OEM\VID_1234&PID_BEAD");
                     var name = key?.GetValue("OEMName") as string;
-                    if (!string.IsNullOrEmpty(name)) return name;
+                    if (!string.IsNullOrEmpty(name)) return $"{name}  (vJoy device #{DeviceId})";
                 }
                 catch { }
-                return $"vJoy Device {DeviceId}";
+                return $"vJoy device #{DeviceId}";
             }
         }
 

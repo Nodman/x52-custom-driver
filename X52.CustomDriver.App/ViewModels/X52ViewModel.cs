@@ -845,6 +845,19 @@ namespace X52.CustomDriver.App.ViewModels
                 _settingsService.SaveSettings();
             }
 
+            // Windows rebuilds the vJoy name entry a little after the devices come back
+            // (as "vJoy Device"); restore ours now and again once that has happened
+            _vJoyService.EnsureBrandName();
+            _ = Task.Run(async () =>
+            {
+                foreach (int delay in new[] { 3000, 7000, 20000 })
+                {
+                    await Task.Delay(delay);
+                    _vJoyService.EnsureBrandName();
+                }
+                System.Windows.Application.Current?.Dispatcher.BeginInvoke(new Action(() => OnPropertyChanged(nameof(VJoyDeviceName))));
+            });
+
             OnPropertyChanged(nameof(IsVJoyActive));
             OnPropertyChanged(nameof(VJoyInfoText));
             OnPropertyChanged(nameof(VJoyNeedsSetup));
