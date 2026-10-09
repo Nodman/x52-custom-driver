@@ -112,28 +112,23 @@ namespace X52.CustomDriver.App
             if (DataContext is not X52ViewModel vm) return;
             var cfg = vm.Settings.CurrentSettings;
 
-            // 1) vJoy device not set up for the X52
-            if (vm.IsVJoyActive && vm.VJoyNeedsSetup && X52ViewModel.FindVJoyTool("vJoyConfig.exe") != null
+            // 1) No vJoy device that fits the X52 (too few buttons, used by another program, removed)
+            if (X52ViewModel.FindVJoyTool("vJoyConfig.exe") != null && vm.VJoyNeedsSetup
+                && vm.VJoyDeviceStatus != X52ViewModel.VJoyUnknown
                 && cfg.DeclinedVJoySetupFor != vm.VJoySignature)
             {
-                var answer = System.Windows.MessageBox.Show(this,
-                    vm.VJoyInfoText.Split("  →")[0] + "\n\n" +
-                    "For every X52 button, all three modes and the 8-way hat to reach your games, vJoy device 1 needs " +
-                    "128 buttons and a POV hat.\n\nSet up vJoy now? Windows will ask for admin permission once.",
-                    "Set up vJoy for the X52", MessageBoxButton.YesNo, MessageBoxImage.Question);
-
-                if (answer == MessageBoxResult.Yes)
+                string signature = vm.VJoySignature;
+                string? result = await AskAndSetUpVJoyAsync(vm);
+                if (result == null)
                 {
-                    string error = await vm.SetUpVJoyAsync();
-                    System.Windows.MessageBox.Show(this,
-                        error.Length == 0 ? "vJoy is set up: 128 buttons and the 8-way hat." : error,
-                        "vJoy", MessageBoxButton.OK, error.Length == 0 ? MessageBoxImage.Information : MessageBoxImage.Warning);
+                    // Don't ask again unless the vJoy situation changes (SETTINGS still has the button)
+                    cfg.DeclinedVJoySetupFor = signature;
+                    vm.Settings.SaveSettings();
                 }
                 else
                 {
-                    // Don't ask again unless the vJoy configuration changes (SETTINGS still has the button)
-                    cfg.DeclinedVJoySetupFor = vm.VJoySignature;
-                    vm.Settings.SaveSettings();
+                    System.Windows.MessageBox.Show(this, result.Length == 0 ? VJoyDoneText(vm) : result,
+                        "vJoy", MessageBoxButton.OK, result.Length == 0 ? MessageBoxImage.Information : MessageBoxImage.Warning);
                 }
             }
 
@@ -261,11 +256,69 @@ namespace X52.CustomDriver.App
             if (DataContext is not X52ViewModel vm) return;
             SetUpVJoyButton.IsEnabled = false;
             VJoyMessage.Foreground = System.Windows.Media.Brushes.Gray;
-            VJoyMessage.Text = "Waiting for admin permission… vJoy restarts its device, games may lose it for a moment.";
-            string error = await vm.SetUpVJoyAsync();
-            VJoyMessage.Foreground = error.Length == 0 ? System.Windows.Media.Brushes.LightGreen : System.Windows.Media.Brushes.IndianRed;
-            VJoyMessage.Text = error.Length == 0 ? "✓ vJoy is set up: 128 buttons and the hat. Restart games that were running." : error;
+            VJoyMessage.Text = "Waiting for admin permission… vJoy restarts its devices, games may lose them for a moment.";
+            string? error = await AskAndSetUpVJoyAsync(vm);
+            VJoyMessage.Foreground = error == "" ? System.Windows.Media.Brushes.LightGreen : System.Windows.Media.Brushes.IndianRed;
+            VJoyMessage.Text = error == null ? "" : error.Length == 0 ? "✓ " + VJoyDoneText(vm) : error;
             SetUpVJoyButton.IsEnabled = true;
+        }
+
+        private static string VJoyDoneText(X52ViewModel vm) =>
+            $"vJoy is set up: device #{vm.VJoyDeviceId} has 128 buttons and the 8-way hat. Restart games that were running." +
+            (vm.VJoyDeviceId != 1 ? " Games see it as a separate controller: bind the X52 once in each game." : "");
+
+        /// <summary>
+        /// Explain what's wrong with the X52's vJoy device and let the user choose: change that device,
+        /// create a separate device just for the X52, or not now. Returns null for "not now",
+        /// "" when vJoy was set up, otherwise an error message.
+        /// </summary>
+        private async Task<string?> AskAndSetUpVJoyAsync(X52ViewModel vm)
+        {
+            uint current = vm.VJoyDeviceId;
+            int status = vm.VJoyDeviceStatus;
+            if (!vm.IsVJoyActive && status == X52ViewModel.VJoyUnknown)
+                return "vJoy isn't installed or isn't working. Install vJoy, then restart this driver.";
+
+            bool busy = status == X52ViewModel.VJoyBusy;
+            bool missing = status == X52ViewModel.VJoyMissing;
+            uint? free = vm.FindFreeVJoyDeviceId();
+
+            string problem = vm.IsVJoyActive ? vm.DescribeVJoyDevice(current) + " – not enough for the X52."
+                           : busy ? $"vJoy device #{current} is used by another program (another feeder or game tool)."
+                           : missing ? $"vJoy device #{current} doesn't exist (removed in Configure vJoy?)."
+                           : vm.DescribeVJoyDevice(current) + ", but the driver couldn't use it.";
+            string message = problem + "\n\n" +
+                "For every X52 button in all three modes and the 8-way hat, the X52 needs a vJoy device with " +
+                "128 buttons and a POV hat. Windows will ask for admin permission once, and vJoy briefly restarts " +
+                "all its devices.";
+
+            var choices = new List<ChoiceDialog.Choice>();
+            var devices = new List<uint?>();
+            if (!busy)
+            {
+                string label = missing ? $"CREATE DEVICE #{current} AGAIN" : $"CHANGE DEVICE #{current}";
+                string desc = missing ? $"Make vJoy device #{current} again, with the X52 layout."
+                    : current == 1 ? "Give vJoy device 1 the X52 layout. Other programs and game bindings that use device 1 will see the new layout."
+                    : $"Give vJoy device #{current} the X52 layout.";
+                choices.Add(new ChoiceDialog.Choice(label, desc, IsDefault: true));
+                devices.Add(current);
+            }
+            if (free != null && (busy || (current == 1 && !missing)))
+            {
+                choices.Add(new ChoiceDialog.Choice($"USE A SEPARATE DEVICE (#{free})",
+                    $"Create vJoy device #{free} just for the X52. Device #{current} stays as it is. " +
+                    "Games see the X52 as a new controller, so bind it once in each game.",
+                    IsDefault: busy));
+                devices.Add(free);
+            }
+            if (devices.Count == 0)
+                return $"vJoy device #{current} is used by another program and vJoy has no room for another device (16 max). Close the other program or free a device in Configure vJoy.";
+            choices.Add(new ChoiceDialog.Choice("NOT NOW", "You can do this later in SETTINGS → SET UP VJOY."));
+            devices.Add(null);
+
+            int pick = ChoiceDialog.Ask(this, "Set up vJoy for the X52", message, choices);
+            if (pick < 0 || devices[pick] == null) return null;
+            return await vm.SetUpVJoyAsync(devices[pick]!.Value);
         }
 
         private void OpenVJoyMonitor_Click(object sender, RoutedEventArgs e)

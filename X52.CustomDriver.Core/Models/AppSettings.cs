@@ -14,7 +14,11 @@ namespace X52.CustomDriver.Core.Models
         public bool ModeShiftsButtons { get; set; } = true;
 
         // Startup checks: remember a "No" so we don't ask again until something changes
-        public string? DeclinedVJoySetupFor { get; set; }   // vJoy config the user said No to, e.g. "18/0/1"
+        public string? DeclinedVJoySetupFor { get; set; }
+
+        // vJoy device the X52 is sent to: 1, or a separate device created for the X52
+        public uint VJoyDeviceId { get; set; } = 1;
+   // vJoy config the user said No to, e.g. "18/0/1"
         public bool DeclinedHideRealX52 { get; set; } = false;
 
         public bool HideRealX52 { get; set; } = false;

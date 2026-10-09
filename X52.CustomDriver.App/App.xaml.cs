@@ -109,8 +109,10 @@ namespace X52.CustomDriver.App
 
                 Log("Connecting Hardware...\n");
                 
-                // Initialize vJoy and check for success
-                if (!_vJoyService.Initialize(1))
+                // vJoy device 1, or the separate device the user chose for the X52
+                uint vJoyId = settingsService.CurrentSettings.VJoyDeviceId;
+                if (vJoyId < 1 || vJoyId > 16) vJoyId = 1;
+                if (!_vJoyService.Initialize(vJoyId))
                 {
                     bool vJoyInstalled = X52.CustomDriver.App.ViewModels.X52ViewModel.FindVJoyTool("vJoyConf.exe") != null;
                     if (!vJoyInstalled)
@@ -124,13 +126,15 @@ namespace X52.CustomDriver.App
                             try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(VJoyDownloadUrl) { UseShellExecute = true }); } catch { }
                         }
                     }
-                    else
+                    else if (X52.CustomDriver.App.ViewModels.X52ViewModel.FindVJoyTool("vJoyConfig.exe") == null)
                     {
+                        // Without vJoyConfig the main window can't offer to fix it
                         System.Windows.MessageBox.Show(
-                            "Could not use vJoy device #1.\n\nPossible reasons:\n- Device 1 is not enabled in Configure vJoy.\n- Another program (e.g. another feeder) is using it.\n\n" +
-                            "Open Configure vJoy, make sure device 1 is enabled, then restart this driver.",
+                            $"Could not use vJoy device #{vJoyId}.\n\nPossible reasons:\n- The device is not enabled in Configure vJoy.\n- Another program (e.g. another feeder) is using it.\n\n" +
+                            $"Open Configure vJoy, make sure device {vJoyId} is enabled, then restart this driver.",
                             "vJoy device not available", MessageBoxButton.OK, MessageBoxImage.Warning);
                     }
+                    // Otherwise the main window explains and offers to change the device or use a separate one
                 }
 
                 _hidService.Initialize();

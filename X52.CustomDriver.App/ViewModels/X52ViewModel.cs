@@ -703,36 +703,73 @@ namespace X52.CustomDriver.App.ViewModels
         {
             get
             {
-                if (!_vJoyService.IsAvailable) return "vJoy device #1 is not available. Install vJoy and enable device 1 in Configure vJoy.";
+                uint id = _vJoyService.DeviceId;
+                if (!_vJoyService.IsAvailable)
+                    return VJoyDeviceStatus switch
+                    {
+                        VJoyBusy => $"vJoy device #{id} is used by another program.  → Click SET UP VJOY to give the X52 its own vJoy device.",
+                        VJoyMissing => $"vJoy device #{id} doesn't exist.  → Click SET UP VJOY to create it.",
+                        _ => "vJoy is not available. Install vJoy, then restart this driver."
+                    };
                 int buttons = _vJoyService.ButtonCount;
                 int cont = _vJoyService.ContinuousPovCount, disc = _vJoyService.DiscretePovCount;
-                string pov = cont > 0 ? $"{cont} continuous POV hat(s)" : disc > 0 ? $"{disc} 4-way POV hat(s)" : "no POV hat";
-                int needed = _settingsService.CurrentSettings.ModeShiftsButtons ? 3 * ButtonsPerBank : VJoyButtonLayout.Length;
-                string advice = buttons < needed || (cont == 0 && disc == 0)
+                string advice = VJoyNeedsSetup
                     ? "  → Click SET UP VJOY below to fix this automatically."
                     : "  ✓ Enough for every X52 button" + (cont > 0 ? " and the 8-way hat." : ".");
-                return $"vJoy device #1: {buttons} buttons, {pov}.{advice}";
+                return $"vJoy device #{id}: {buttons} buttons, {PovText(cont, disc)}.{advice}";
             }
         }
+
+        private static string PovText(int cont, int disc) =>
+            cont > 0 ? $"{cont} continuous POV hat(s)" : disc > 0 ? $"{disc} 4-way POV hat(s)" : "no POV hat";
+
+        private int NeededVJoyButtons => _settingsService.CurrentSettings.ModeShiftsButtons ? 3 * ButtonsPerBank : VJoyButtonLayout.Length;
 
         public bool VJoyNeedsSetup
         {
             get
             {
                 if (!_vJoyService.IsAvailable) return true;
-                int needed = _settingsService.CurrentSettings.ModeShiftsButtons ? 3 * ButtonsPerBank : VJoyButtonLayout.Length;
-                return _vJoyService.ButtonCount < needed || (_vJoyService.ContinuousPovCount == 0 && _vJoyService.DiscretePovCount == 0);
+                return _vJoyService.ButtonCount < NeededVJoyButtons || (_vJoyService.ContinuousPovCount == 0 && _vJoyService.DiscretePovCount == 0);
             }
         }
 
+        // vJoy device states (GetVJDStatus)
+        public const int VJoyOwn = 0, VJoyFree = 1, VJoyBusy = 2, VJoyMissing = 3, VJoyUnknown = 4;
+
+        /// <summary>The vJoy device this driver uses (1, or a separate one made for the X52).</summary>
+        public uint VJoyDeviceId => _vJoyService.DeviceId;
+        public int VJoyDeviceStatus => _vJoyService.QueryDeviceStatus(_vJoyService.DeviceId);
+
+        /// <summary>One line about any vJoy device, e.g. "vJoy device #1: 32 buttons, no POV hat – used by another program".</summary>
+        public string DescribeVJoyDevice(uint id)
+        {
+            int status = _vJoyService.QueryDeviceStatus(id);
+            if (status == VJoyMissing) return $"vJoy device #{id} doesn't exist";
+            if (status == VJoyUnknown) return "vJoy isn't responding";
+            var (b, c, d) = _vJoyService.QueryDeviceLayout(id);
+            string who = status == VJoyBusy ? " – used by another program" : status == VJoyFree ? " – not in use" : "";
+            return $"vJoy device #{id}: {b} buttons, {PovText(c, d)}{who}";
+        }
+
+        /// <summary>First vJoy device number (2-16) that doesn't exist yet, so it can be created for the X52.</summary>
+        public uint? FindFreeVJoyDeviceId()
+        {
+            for (uint id = 2; id <= 16; id++)
+                if (_vJoyService.QueryDeviceStatus(id) == VJoyMissing) return id;
+            return null;
+        }
+
         /// <summary>
-        /// Reconfigure vJoy device 1 for the X52 with vJoy's own command-line tool:
-        /// all 8 axes, 128 buttons, 1 continuous POV. Needs admin rights (one UAC prompt).
+        /// Create or reconfigure a vJoy device for the X52 with vJoy's own command-line tool
+        /// (all 8 axes, 128 buttons, 1 continuous POV; one UAC prompt), then use it from now on.
+        /// vJoy restarts its driver for this, so every vJoy device disappears for a moment.
         /// </summary>
-        public async Task<string> SetUpVJoyAsync()
+        public async Task<string> SetUpVJoyAsync(uint deviceId)
         {
             string? tool = FindVJoyTool("vJoyConfig.exe");
             if (tool == null) return "vJoyConfig.exe wasn't found. Is vJoy installed in Program Files\\vJoy?";
+            uint previous = _vJoyService.DeviceId;
 
             // Let go of the device while vJoy rebuilds it
             for (int n = 1; n <= 128; n++) _vjoyPressed[n] = false;
@@ -742,7 +779,7 @@ namespace X52.CustomDriver.App.ViewModels
             {
                 try
                 {
-                    var psi = new System.Diagnostics.ProcessStartInfo(tool, "1 -f -a x y z rx ry rz sl0 sl1 -b 128 -p 1")
+                    var psi = new System.Diagnostics.ProcessStartInfo(tool, $"{deviceId} -f -a x y z rx ry rz sl0 sl1 -b 128 -p 1")
                     {
                         UseShellExecute = true,
                         Verb = "runas",
@@ -750,7 +787,11 @@ namespace X52.CustomDriver.App.ViewModels
                     };
                     using var p = System.Diagnostics.Process.Start(psi);
                     if (p == null) return "Could not start vJoyConfig.";
-                    if (!p.WaitForExit(60000)) return "vJoyConfig did not finish in time.";
+                    if (!p.WaitForExit(60000))
+                    {
+                        try { p.Kill(); } catch { /* elevated: may not be allowed */ }
+                        return "vJoyConfig did not finish in time.";
+                    }
                     return "";
                 }
                 catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223)
@@ -760,23 +801,37 @@ namespace X52.CustomDriver.App.ViewModels
                 catch (Exception ex) { return ex.Message; }
             });
 
-            // vJoy restarts its device; give Windows a moment, then take it again
+            // vJoy restarts its devices; give Windows a moment, then take ours
+            uint target = error.Length == 0 ? deviceId : previous;
             for (int attempt = 0; attempt < 10 && !_vJoyService.IsAvailable; attempt++)
             {
                 await Task.Delay(1000);
-                _vJoyService.Initialize(1);
+                _vJoyService.Initialize(target);
+            }
+            // The new device didn't come up: go back to the one that worked before
+            if (!_vJoyService.IsAvailable && target != previous)
+                _vJoyService.Initialize(previous);
+
+            if (_vJoyService.IsAvailable && _settingsService.CurrentSettings.VJoyDeviceId != _vJoyService.DeviceId)
+            {
+                _settingsService.CurrentSettings.VJoyDeviceId = _vJoyService.DeviceId;
+                _settingsService.SaveSettings();
             }
 
             OnPropertyChanged(nameof(IsVJoyActive));
             OnPropertyChanged(nameof(VJoyInfoText));
             OnPropertyChanged(nameof(VJoyNeedsSetup));
+            OnPropertyChanged(nameof(VJoyDeviceName));
             if (error.Length > 0) return error;
-            if (!_vJoyService.IsAvailable) return "vJoy was changed but the device didn't come back. Restart this driver.";
+            if (!_vJoyService.IsAvailable || _vJoyService.DeviceId != deviceId)
+                return $"vJoy was changed but device #{deviceId} didn't come back. Restart this driver.";
             return VJoyNeedsSetup ? "vJoyConfig ran but the device still reports too few buttons. Try Configure vJoy." : "";
         }
 
-        /// <summary>Short fingerprint of the current vJoy configuration (buttons/continuous POVs/4-way POVs).</summary>
-        public string VJoySignature => $"{_vJoyService.ButtonCount}/{_vJoyService.ContinuousPovCount}/{_vJoyService.DiscretePovCount}";
+        /// <summary>Fingerprint of the current vJoy situation, so a declined setup is only offered again when it changes.</summary>
+        public string VJoySignature => _vJoyService.IsAvailable
+            ? $"{_vJoyService.DeviceId}:{_vJoyService.ButtonCount}/{_vJoyService.ContinuousPovCount}/{_vJoyService.DiscretePovCount}"
+            : $"{_vJoyService.DeviceId}:unavailable:{VJoyDeviceStatus}";
 
         public SettingsService Settings => _settingsService;
         public bool IsX52Connected => _hidService.IsConnected;

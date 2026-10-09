@@ -33,6 +33,26 @@ namespace X52.CustomDriver.Core.Services
         [DllImport("vJoyInterface.dll", EntryPoint = "SetContPov")] private static extern bool NativeSetContPov(int value, uint rID, uint nPov);
         [DllImport("vJoyInterface.dll", EntryPoint = "SetDiscPov")] private static extern bool NativeSetDiscPov(int value, uint rID, uint nPov);
 
+        [DllImport("vJoyInterface.dll", EntryPoint = "GetVJDStatus")] private static extern int NativeGetStatus(uint rID);
+
+        public const int StatusOwn = 0, StatusFree = 1, StatusBusy = 2, StatusMissing = 3, StatusUnknown = 4;
+
+        public int QueryDeviceStatus(uint id)
+        {
+            try
+            {
+                int s = NativeGetStatus(id);
+                return s is >= StatusOwn and <= StatusUnknown ? s : StatusUnknown;
+            }
+            catch { return StatusUnknown; }
+        }
+
+        public (int buttons, int contPovs, int discPovs) QueryDeviceLayout(uint id)
+        {
+            try { return (NativeButtonNumber(id), NativeContPovNumber(id), NativeDiscPovNumber(id)); }
+            catch { return (0, 0, 0); }
+        }
+
         public int ButtonCount { get; private set; }
         public int ContinuousPovCount { get; private set; }
         public int DiscretePovCount { get; private set; }

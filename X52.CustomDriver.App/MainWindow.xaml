@@ -375,11 +375,11 @@
                                            Text="Off: every mode uses buttons 1–31. The stick-top hat is POV 1. Windows' Game Controllers window only shows the first 32 buttons."/>
                                 <WrapPanel>
                                     <Button x:Name="SetUpVJoyButton" Content="SET UP VJOY" Style="{StaticResource NeonButton}" Margin="0,0,10,8" Click="SetUpVJoy_Click"
-                                            ToolTip="Sets vJoy device 1 to 8 axes, 128 buttons and 1 continuous POV hat (asks for admin permission once)"/>
+                                            ToolTip="Give the X52 a vJoy device with 8 axes, 128 buttons and 1 continuous POV hat: change the current device or create a separate one (asks for admin permission once)"/>
                                     <Button Content="OPEN GAME CONTROLLERS" Style="{StaticResource NeonButton}" Margin="0,0,10,8" Click="OpenJoyCpl_Click"
                                             ToolTip="Opens joy.cpl to test the virtual stick"/>
                                     <Button Content="CONFIGURE VJOY" Style="{StaticResource NeonButton}" Margin="0,0,10,8" Click="OpenVJoyConf_Click"
-                                            ToolTip="Set the number of buttons and POV hats of vJoy device 1"/>
+                                            ToolTip="Open vJoy's own configuration tool"/>
                                     <Button Content="VJOY MONITOR" Style="{StaticResource NeonButton}" Margin="0,0,10,8" Click="OpenVJoyMonitor_Click"
                                             ToolTip="vJoy's own monitor: shows all axes, 128 buttons and POV hats of the virtual stick"/>
                                 </WrapPanel>

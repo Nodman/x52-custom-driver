@@ -27,6 +27,15 @@ namespace X52.CustomDriver.Core.Interfaces
         int ContinuousPovCount { get; }
         int DiscretePovCount { get; }
 
+        /// <summary>
+        /// State of any vJoy device (1-16): 0 = used by this driver, 1 = free, 2 = used by another
+        /// program, 3 = doesn't exist, 4 = unknown (vJoy not installed or not working).
+        /// </summary>
+        int QueryDeviceStatus(uint id);
+
+        /// <summary>Configured buttons / continuous POVs / 4-way POVs of any existing vJoy device.</summary>
+        (int buttons, int contPovs, int discPovs) QueryDeviceLayout(uint id);
+
         /// <summary>Set POV hat 1. direction: -1 = centred, else degrees clockwise from up (0, 45, ... 315).</summary>
         void SetPov(int direction);
     }

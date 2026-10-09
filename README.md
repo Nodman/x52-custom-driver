@@ -49,7 +49,7 @@ The small rubber thumb stick on the throttle now works as a real Windows mouse, 
 
 1. **vJoy**: This driver sends data to a virtual joystick.
    - Download and install vJoy from [vJoy Official Site](http://vjoystick.sourceforge.net/).
-   - Ensure **Device #1** is enabled in "Configure vJoy".
+   - On first start the driver offers to set vJoy up for the X52 (128 buttons + POV hat): either change vJoy device #1, or create a separate vJoy device just for the X52 (useful when device #1 is used by another program).
 2. **.NET 9 Runtime**: Usually included with Windows 11 or installed automatically by the app.
 
 ## 💻 Installation
