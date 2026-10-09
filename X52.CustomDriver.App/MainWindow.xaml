@@ -16,18 +16,29 @@
                         </Grid.ColumnDefinitions>
 
                     <StackPanel Grid.Column="0">
-                        <TextBlock Text="Ærakon x52 driver v1.2.3" FontSize="20" FontWeight="Bold" Foreground="#00D2FF" Margin="0,0,0,20"/>
+                        <TextBlock Text="Ærakon x52 driver v1.2.4" FontSize="20" FontWeight="Bold" Foreground="#00D2FF" Margin="0,0,0,20"/>
 
                         <TextBlock Text="PRIMARY AXES" FontWeight="Bold" Margin="0,10,0,10" Foreground="#555"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
 
-                        <TextBlock Text="X AXIS (Aileron)" Style="{StaticResource AxisLabel}"/>
-                        <ProgressBar Style="{StaticResource NeonProgressBar}" Value="{Binding XPercent, Mode=OneWay}"/>
+                            <!-- Top-down stick position: physical vs. after curves -->
+                            <local:StickPositionView x:Name="StickView" Grid.Column="0" Margin="0,0,20,0"/>
 
-                        <TextBlock Text="Y AXIS (Elevator)" Style="{StaticResource AxisLabel}"/>
-                        <ProgressBar Style="{StaticResource NeonProgressBar}" Value="{Binding YPercent, Mode=OneWay}"/>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="X AXIS (Aileron)" Style="{StaticResource AxisLabel}" Margin="0,0,0,2"/>
+                                <ProgressBar Style="{StaticResource NeonProgressBar}" Value="{Binding XPercent, Mode=OneWay}"/>
 
-                        <TextBlock Text="Z AXIS (Rudder)" Style="{StaticResource AxisLabel}"/>
-                        <ProgressBar Style="{StaticResource NeonProgressBar}" Value="{Binding ZPercent, Mode=OneWay}"/>
+                                <TextBlock Text="Y AXIS (Elevator)" Style="{StaticResource AxisLabel}"/>
+                                <ProgressBar Style="{StaticResource NeonProgressBar}" Value="{Binding YPercent, Mode=OneWay}"/>
+
+                                <TextBlock Text="Z AXIS (Rudder)" Style="{StaticResource AxisLabel}"/>
+                                <ProgressBar Style="{StaticResource NeonProgressBar}" Value="{Binding ZPercent, Mode=OneWay}"/>
+                            </StackPanel>
+                        </Grid>
 
                         <TextBlock Text="THROTTLE &amp; AUX" FontWeight="Bold" Margin="0,30,0,10" Foreground="#555"/>
 

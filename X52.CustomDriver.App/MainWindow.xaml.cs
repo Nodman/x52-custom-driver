@@ -22,6 +22,7 @@ namespace X52.CustomDriver.App
             InitializeComponent();
             DataContext = viewModel;
             ProfilesTab.Initialize(viewModel);
+            StickView.Initialize(viewModel);
 
             // Create the window handle now so the hotkey works even while the window is hidden in the tray
             var handle = new WindowInteropHelper(this).EnsureHandle();

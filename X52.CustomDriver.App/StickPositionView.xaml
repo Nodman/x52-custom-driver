@@ -1,0 +1,24 @@
+<UserControl x:Class="X52.CustomDriver.App.StickPositionView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Foreground="White">
+    <!-- Top-down view of the stick: grey = physical position, blue = what the game gets after the curves -->
+    <StackPanel>
+        <Border Background="#0A0A0A" BorderBrush="#222" BorderThickness="1" CornerRadius="6" Padding="6">
+            <Canvas x:Name="StickCanvas" Width="200" Height="200" ClipToBounds="True"/>
+        </Border>
+
+        <!-- Twist (rudder) -->
+        <Border Background="#0A0A0A" BorderBrush="#222" BorderThickness="1" CornerRadius="6" Padding="6" Margin="0,6,0,0">
+            <Canvas x:Name="TwistCanvas" Width="200" Height="14" ClipToBounds="True"/>
+        </Border>
+
+        <StackPanel Orientation="Horizontal" Margin="2,8,0,0">
+            <Ellipse Width="8" Height="8" Fill="#888888" VerticalAlignment="Center"/>
+            <TextBlock Text="stick" FontSize="11" Foreground="#888" Margin="5,0,14,0"/>
+            <Ellipse Width="8" Height="8" Fill="#00D2FF" VerticalAlignment="Center"/>
+            <TextBlock Text="to game (with curves)" FontSize="11" Foreground="#888" Margin="5,0,0,0"/>
+        </StackPanel>
+        <TextBlock x:Name="ValuesText" FontSize="10" FontFamily="Consolas" Foreground="#555" Margin="2,4,0,0"/>
+    </StackPanel>
+</UserControl>
