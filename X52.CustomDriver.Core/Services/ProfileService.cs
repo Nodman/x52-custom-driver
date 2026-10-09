@@ -34,6 +34,13 @@ namespace X52.CustomDriver.Core.Services
 
         public string ProfilesPath => _profilesPath;
 
+        // Each profile as it was last written to (or read from) disk. Edits apply live, but only
+        // SAVE writes them; comparing with this tells which profiles have unsaved changes.
+        private readonly Dictionary<X52Profile, string> _saved = new(ReferenceEqualityComparer.Instance);
+
+        /// <summary>Raised (on the caller's thread) when any profile's unsaved state changes.</summary>
+        public event EventHandler? UnsavedChanged;
+
         public ProfileService()
         {
             _profilesPath = ChooseProfilesPath(out string? folderNotice);
@@ -77,6 +84,8 @@ namespace X52.CustomDriver.Core.Services
             _profiles = loaded ?? new List<X52Profile>();
             LoadNotice = notice;
             MigrateLoadedProfiles();
+            // What's on disk counts as saved (the migration only fills in what old files lacked)
+            foreach (var p in _profiles) _saved[p] = Snapshot(p);
         }
 
         /// <summary>
@@ -91,19 +100,97 @@ namespace X52.CustomDriver.Core.Services
                         m.Action = m.EffectiveAction;
         }
 
-        public bool SaveProfiles()
+        /// <summary>Saves every profile, including all unsaved edits.</summary>
+        public bool SaveProfiles() => WriteFile(_ => true);
+
+        /// <summary>Saves this profile's edits. Other profiles are written as they were last saved.</summary>
+        public bool SaveProfile(X52Profile profile) => WriteFile(p => ReferenceEquals(p, profile));
+
+        /// <summary>
+        /// Writes the profile list. Profiles chosen by <paramref name="takeCurrent"/> (and ones never
+        /// saved) are written as they are now; the rest as they were last saved, so their unsaved
+        /// edits stay unsaved. Used for SAVE and for create / duplicate / delete.
+        /// </summary>
+        private bool WriteFile(Func<X52Profile, bool> takeCurrent)
         {
             try
             {
-                SafeJsonFile.Save(_profilesPath, _profiles);
+                var written = new List<X52Profile>();
+                var output = new List<X52Profile>();
+                foreach (var p in _profiles.ToList())
+                {
+                    if (takeCurrent(p) || !_saved.TryGetValue(p, out string? json))
+                    {
+                        output.Add(p);
+                        written.Add(p);
+                    }
+                    else
+                    {
+                        output.Add(JsonSerializer.Deserialize<X52Profile>(json) ?? p);
+                    }
+                }
+
+                SafeJsonFile.Save(_profilesPath, output);
+                foreach (var p in written) _saved[p] = Snapshot(p);
+                RefreshUnsavedFlags();
                 Saved?.Invoke(this, EventArgs.Empty);
                 return true;
             }
             catch (Exception ex)
             {
-                SaveFailed?.Invoke(this, $"Couldn't save profiles to {_profilesPath}: {ex.Message} Your changes are still active and will be saved on the next save.");
+                SaveFailed?.Invoke(this, $"Couldn't save profiles to {_profilesPath}: {ex.Message} Your changes are still active; try SAVE again.");
                 return false;
             }
+        }
+
+        private static string Snapshot(X52Profile p) => JsonSerializer.Serialize(p);
+
+        private bool IsUnsaved(X52Profile p) => !_saved.TryGetValue(p, out string? json) || json != Snapshot(p);
+
+        /// <summary>Profiles with edits that aren't saved yet (checked now, not from the flags).</summary>
+        public List<X52Profile> UnsavedProfiles() => _profiles.Where(IsUnsaved).ToList();
+
+        public bool HasUnsavedChanges => _profiles.Any(p => p.HasUnsavedChanges);
+
+        /// <summary>Re-check every profile against its saved copy and update HasUnsavedChanges.</summary>
+        public void RefreshUnsavedFlags()
+        {
+            bool changed = false;
+            foreach (var p in _profiles)
+            {
+                bool unsaved = IsUnsaved(p);
+                if (p.HasUnsavedChanges != unsaved) { p.HasUnsavedChanges = unsaved; changed = true; }
+            }
+            if (changed) UnsavedChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>
+        /// Throw away a profile's unsaved edits. The objects are updated in place, so everything
+        /// that holds on to the profile (or its mouse settings) keeps working.
+        /// </summary>
+        public void RevertProfile(X52Profile profile)
+        {
+            if (!_saved.TryGetValue(profile, out string? json)) return;
+            var saved = JsonSerializer.Deserialize<X52Profile>(json);
+            if (saved == null) return;
+
+            profile.Name = saved.Name;
+            profile.ProcessName = saved.ProcessName;
+            profile.Mappings.Clear();
+            foreach (var m in saved.Mappings) profile.Mappings.Add(m);
+            profile.AxisSettings = saved.AxisSettings;
+            if (saved.Mouse != null)
+            {
+                if (profile.Mouse == null) profile.Mouse = saved.Mouse;
+                else
+                {
+                    var m = profile.Mouse;
+                    m.Enabled = saved.Mouse.Enabled; m.MoveCursor = saved.Mouse.MoveCursor;
+                    m.LeftClick = saved.Mouse.LeftClick; m.MiddleClick = saved.Mouse.MiddleClick; m.Scroll = saved.Mouse.Scroll;
+                    m.Speed = saved.Mouse.Speed; m.Deadzone = saved.Mouse.Deadzone;
+                }
+            }
+            RefreshUnsavedFlags();
         }
 
         /// <summary>
@@ -182,15 +269,17 @@ namespace X52.CustomDriver.Core.Services
         {
             if (_profiles.Any(p => p.Name == profile.Name)) return;
             _profiles.Add(profile);
-            SaveProfiles();
+            WriteFile(p => ReferenceEquals(p, profile));
         }
 
         public void RemoveProfile(X52Profile profile)
         {
             if (_profiles.Count <= 1) return; // Don't delete the last profile
             _profiles.Remove(profile);
+            _saved.Remove(profile);
             if (ReferenceEquals(_lastAutoTarget, profile)) _lastAutoTarget = null;
-            SaveProfiles();
+            WriteFile(_ => false);
+            UnsavedChanged?.Invoke(this, EventArgs.Empty);
             if (ReferenceEquals(_activeProfile, profile))
                 SetActiveProfile(_profiles.FirstOrDefault(p => p.Name == "Default") ?? _profiles[0]);
         }
@@ -206,7 +295,7 @@ namespace X52.CustomDriver.Core.Services
                     _activeProfile = profile;
                     OnProfileChanged?.Invoke(this, _activeProfile);
                 }
-                SaveProfiles();
+                SaveProfile(profile);
             }
         }
 

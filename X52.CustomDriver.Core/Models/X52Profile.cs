@@ -28,6 +28,16 @@ namespace X52.CustomDriver.Core.Models
         // Null in profiles saved by older versions; filled in on load
         public ThumbMouseSettings? Mouse { get; set; }
 
+        // Edited since the last save (edits apply right away, but are only written on SAVE).
+        // Kept up to date by ProfileService.RefreshUnsavedFlags.
+        private bool _hasUnsavedChanges;
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool HasUnsavedChanges
+        {
+            get => _hasUnsavedChanges;
+            set { if (_hasUnsavedChanges != value) { _hasUnsavedChanges = value; OnPropertyChanged(nameof(HasUnsavedChanges)); } }
+        }
+
         public event PropertyChangedEventHandler? PropertyChanged;
         private void OnPropertyChanged(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }

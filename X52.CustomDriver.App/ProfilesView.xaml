@@ -51,7 +51,11 @@
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <StackPanel>
-                            <TextBlock Text="{Binding Name}" FontSize="14"/>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding Name}" FontSize="14"/>
+                                <TextBlock Text=" ●" FontSize="14" Foreground="#FFA500" ToolTip="Unsaved changes"
+                                           Visibility="{Binding HasUnsavedChanges, Converter={StaticResource BoolToVisibility}}"/>
+                            </StackPanel>
                             <TextBlock Text="{Binding ProcessName}" FontSize="10" Foreground="#666"/>
                         </StackPanel>
                     </DataTemplate>
@@ -72,6 +76,7 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" Margin="0,0,10,0">
                     <TextBlock Text="PROFILE NAME" Foreground="#888" FontSize="11" Margin="0,0,0,5"/>
@@ -90,9 +95,12 @@
                 <Button Grid.Column="2" x:Name="MakeActiveButton" Content="MAKE ACTIVE" Style="{StaticResource NeonButton}"
                         Height="32" MinWidth="120" Margin="10,0,0,0" VerticalAlignment="Bottom" Click="MakeActive_Click"
                         ToolTip="Use this profile now. It stays until a game with its own profile starts or closes."/>
-                <Button Grid.Column="3" x:Name="SaveButton" Content="SAVE" Style="{StaticResource NeonButton}"
+                <Button Grid.Column="3" x:Name="RevertButton" Content="REVERT" Style="{StaticResource DangerButton}"
+                        Height="32" MinWidth="80" Margin="10,0,0,0" VerticalAlignment="Bottom" Click="Revert_Click"
+                        ToolTip="Throw away this profile's unsaved changes and go back to the saved version"/>
+                <Button Grid.Column="4" x:Name="SaveButton" Content="SAVE" Style="{StaticResource NeonButton}"
                         Height="32" MinWidth="90" Margin="10,0,0,0" VerticalAlignment="Bottom" Click="Save_Click"
-                        ToolTip="Changes are also saved automatically"/>
+                        ToolTip="Changes work right away, but are only kept after SAVE"/>
             </Grid>
 
             <TabControl Grid.Row="1" Margin="0,15,0,0">
@@ -193,7 +201,7 @@
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <Border x:Name="MousePanel" Style="{StaticResource Card}" HorizontalAlignment="Left" Width="460" VerticalAlignment="Top">
                             <StackPanel>
-                                <CheckBox IsChecked="{Binding Enabled}" Content="Thumb stick mouse ON (Ctrl+Alt+M)" Style="{StaticResource NeonCheckBox}" Margin="0,0,0,12" FontWeight="Bold"/>
+                                <CheckBox IsChecked="{Binding Enabled}" Content="Thumb stick mouse ON" ToolTip="Ctrl+Alt+M switches it on/off for now without changing the profile" Style="{StaticResource NeonCheckBox}" Margin="0,0,0,12" FontWeight="Bold"/>
                                 <StackPanel Margin="26,0,0,18" IsEnabled="{Binding Enabled}">
                                     <CheckBox IsChecked="{Binding MoveCursor}" Content="Thumb stick moves the cursor" Style="{StaticResource NeonCheckBox}" Margin="0,0,0,8"/>
                                     <CheckBox IsChecked="{Binding LeftClick}" Content="Mouse button next to the thumb stick = left click" Style="{StaticResource NeonCheckBox}" Margin="0,0,0,8"/>

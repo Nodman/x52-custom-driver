@@ -82,6 +82,12 @@ namespace X52.CustomDriver.App
                     e.Cancel = true;
                     this.Hide();
                 }
+                else if (System.Windows.Application.Current is App app)
+                {
+                    // Closing the window ends the driver: ask about unsaved profile edits first
+                    if (!app.ConfirmUnsavedProfiles(this)) { e.Cancel = true; return; }
+                    App.IsExiting = true;
+                }
             }
             base.OnClosing(e);
         }

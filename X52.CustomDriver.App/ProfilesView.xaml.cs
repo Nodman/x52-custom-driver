@@ -13,13 +13,15 @@ namespace X52.CustomDriver.App
 {
     /// <summary>
     /// Profiles tab: profile list, game .exe, and per-profile button mappings, axis curves
-    /// and thumb stick mouse settings. Everything is saved automatically.
+    /// and thumb stick mouse settings. Edits apply right away; SAVE writes the selected profile,
+    /// REVERT goes back to its saved version. Profiles with unsaved edits are marked with ●.
     /// </summary>
     public partial class ProfilesView : System.Windows.Controls.UserControl
     {
         private X52ViewModel? _vm;
         private X52Profile? _selected;
-        private readonly DispatcherTimer _saveTimer = new() { Interval = TimeSpan.FromMilliseconds(600) };
+        // Edits are checked against the saved copy shortly after they happen (to update the ● marks)
+        private readonly DispatcherTimer _dirtyTimer = new() { Interval = TimeSpan.FromMilliseconds(300) };
 
         // Friendly names, same as the LIVE tab; profiles still store the button IDs
         public IReadOnlyList<ButtonCatalog.ButtonInfo> AvailableButtons => ButtonCatalog.Mappable;
@@ -32,14 +34,14 @@ namespace X52.CustomDriver.App
         {
             InitializeComponent();
 
-            _saveTimer.Tick += (s, e) => { _saveTimer.Stop(); _vm?.SaveProfiles(); };
+            _dirtyTimer.Tick += (s, e) => { _dirtyTimer.Stop(); RefreshUnsaved(); };
 
-            // Autosave: any slider, checkbox or text change inside this view schedules a save
+            // Any slider, checkbox, list or text change inside this view may be an edit
             AddHandler(RangeBase.ValueChangedEvent, new RoutedPropertyChangedEventHandler<double>((s, e) => ScheduleSave()));
             AddHandler(ToggleButton.CheckedEvent, new RoutedEventHandler((s, e) => ScheduleSave()));
             AddHandler(ToggleButton.UncheckedEvent, new RoutedEventHandler((s, e) => ScheduleSave()));
+            AddHandler(Selector.SelectionChangedEvent, new SelectionChangedEventHandler((s, e) => ScheduleSave()));
             AddHandler(System.Windows.Controls.Primitives.TextBoxBase.TextChangedEvent, new System.Windows.Controls.TextChangedEventHandler((s, e) => ScheduleSave()));
-            Unloaded += (s, e) => SaveNow();
         }
 
         public void Initialize(X52ViewModel vm)
@@ -56,17 +58,29 @@ namespace X52.CustomDriver.App
             if (ProfilesList.SelectedItem == null && vm.ProfileService.Profiles.Count > 0) ProfilesList.SelectedIndex = 0;
         }
 
+        // (Name kept from the autosave days: it now only schedules the unsaved-changes check)
         private void ScheduleSave()
         {
             if (_vm == null) return;
-            _saveTimer.Stop();
-            _saveTimer.Start();
+            _dirtyTimer.Stop();
+            _dirtyTimer.Start();
         }
 
-        public void SaveNow()
+        private void RefreshUnsaved()
         {
-            if (_saveTimer.IsEnabled) _saveTimer.Stop();
-            _vm?.SaveProfiles();
+            _vm?.RefreshUnsavedProfiles();
+            UpdateRevertButton();
+        }
+
+        private void UpdateRevertButton() => RevertButton.IsEnabled = _selected?.HasUnsavedChanges == true;
+
+        /// <summary>Finish edits still in progress (name box, mappings table) so they count.</summary>
+        public void CommitPendingEdits()
+        {
+            CommitName();
+            try { MappingsGrid.CommitEdit(DataGridEditingUnit.Row, true); } catch { }
+            _dirtyTimer.Stop();
+            RefreshUnsaved();
         }
 
         private void UpdateActiveText()
@@ -86,15 +100,35 @@ namespace X52.CustomDriver.App
 
         private void Save_Click(object sender, RoutedEventArgs e)
         {
-            CommitName();
-            // Finish any cell that is still being edited in the mappings table
-            MappingsGrid.CommitEdit(DataGridEditingUnit.Row, true);
-            SaveNow();
+            if (_vm == null || _selected == null) return;
+            CommitPendingEdits();
+            // Writes only this profile's edits; other profiles keep their own unsaved state
+            if (!_vm.ProfileService.SaveProfile(_selected)) return; // the message bar says why
+            UpdateRevertButton();
 
             SaveButton.Content = "SAVED ✓";
             var reset = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1.5) };
             reset.Tick += (s, a) => { reset.Stop(); SaveButton.Content = "SAVE"; };
             reset.Start();
+        }
+
+        private void Revert_Click(object sender, RoutedEventArgs e)
+        {
+            if (_vm == null || _selected == null) return;
+            CommitPendingEdits();
+            if (!_selected.HasUnsavedChanges) return;
+            var answer = System.Windows.MessageBox.Show(Window.GetWindow(this)!,
+                $"Throw away the unsaved changes to \"{_selected.Name}\" and go back to the saved version?",
+                "Revert profile", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
+            if (answer != MessageBoxResult.Yes) return;
+
+            var profile = _selected;
+            // Keys held by mappings that may disappear must not stay pressed
+            _vm.ReleaseAllMappedKeys();
+            _vm.ProfileService.RevertProfile(profile);
+            ProfilesList.Items.Refresh();
+            ProfilesList.SelectedItem = profile;
+            ShowProfile(profile); // reload name, curves and mouse settings into the editor
         }
 
         private void MakeActive_Click(object sender, RoutedEventArgs e)
@@ -108,8 +142,15 @@ namespace X52.CustomDriver.App
 
         private void ProfilesList_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            if (_vm == null || !ReferenceEquals(e.OriginalSource, ProfilesList)) return;
+            CommitName(); // a rename in progress belongs to the profile that was selected
+            ShowProfile(ProfilesList.SelectedItem as X52Profile);
+        }
+
+        private void ShowProfile(X52Profile? profile)
+        {
             if (_vm == null) return;
-            _selected = ProfilesList.SelectedItem as X52Profile;
+            _selected = profile;
             EditorArea.IsEnabled = _selected != null;
             EditorArea.DataContext = _selected;
 
@@ -133,6 +174,7 @@ namespace X52.CustomDriver.App
             MousePanel.DataContext = _vm.EnsureMouseSettings(_selected);
             CurveEditor.SetProfile(_selected);
             UpdateMakeActiveButton();
+            UpdateRevertButton();
         }
 
         private void RefreshList(X52Profile? select)

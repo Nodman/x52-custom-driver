@@ -169,7 +169,7 @@ namespace X52.CustomDriver.App
         {
             if (_profile == null) return;
             Curve.Reset();
-            LoadAxis(); // slider changes bubble up to the profile view, which saves
+            LoadAxis(); // slider changes bubble up to the profile view, which marks the profile as edited
         }
     }
 }

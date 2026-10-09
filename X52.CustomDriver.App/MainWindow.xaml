@@ -302,7 +302,11 @@
                                   DropDownOpened="ActiveProfileCombo_DropDownOpened">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
-                                    <TextBlock Text="{Binding Name}"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding Name}"/>
+                                        <TextBlock Text=" ●" Foreground="#FFA500" ToolTip="Unsaved changes (PROFILES → SAVE)"
+                                                   Visibility="{Binding HasUnsavedChanges, Converter={StaticResource BoolToVisibility}}"/>
+                                    </StackPanel>
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
@@ -341,7 +345,7 @@
                 </ScrollViewer>
             </TabItem>
 
-            <TabItem Header="PROFILES">
+            <TabItem Header="{Binding ProfilesTabHeader}">
                 <local:ProfilesView x:Name="ProfilesTab"/>
             </TabItem>
 

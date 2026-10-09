@@ -171,13 +171,18 @@ namespace X52.CustomDriver.App
                     foreach (var profile in _viewModel.Profiles)
                     {
                         var target = profile;
-                        var item = new ToolStripMenuItem(profile.Name) { Checked = ReferenceEquals(profile, _viewModel.CurrentProfile) };
+                        var item = new ToolStripMenuItem(profile.HasUnsavedChanges ? profile.Name + "  ●" : profile.Name) { Checked = ReferenceEquals(profile, _viewModel.CurrentProfile) };
                         item.Click += (s2, a2) => _viewModel?.ActivateProfile(target);
                         profileMenu.DropDownItems.Add(item);
                     }
                 };
                 contextMenu.Items.Add(profileMenu);
-                contextMenu.Items.Add("Exit", null, (s, args) => { IsExiting = true; System.Windows.Application.Current.Shutdown(); });
+                contextMenu.Items.Add("Exit", null, (s, args) =>
+                {
+                    if (!ConfirmUnsavedProfiles(MainWindow)) return;
+                    IsExiting = true;
+                    System.Windows.Application.Current.Shutdown();
+                });
                 _notifyIcon.ContextMenuStrip = contextMenu;
 
                 Log("Starting UI...\n");
@@ -224,11 +229,45 @@ namespace X52.CustomDriver.App
             }
         }
 
+        /// <summary>
+        /// Before the driver closes: if profiles have unsaved edits, ask Save / Don't save / Cancel.
+        /// Returns false when closing should be cancelled.
+        /// </summary>
+        public bool ConfirmUnsavedProfiles(Window? owner)
+        {
+            if (_profileService == null) return true;
+            (MainWindow as MainWindow)?.ProfilesTab.CommitPendingEdits();
+            var unsaved = _profileService.UnsavedProfiles();
+            if (unsaved.Count == 0) return true;
+
+            string names = string.Join("\n", unsaved.Select(p => "   • " + p.Name));
+            string text = $"These profiles have unsaved changes:\n\n{names}\n\n" +
+                          "Save them before closing?\n\nYes = save,  No = throw the changes away,  Cancel = keep the driver open.";
+            var answer = owner != null && owner.IsVisible
+                ? System.Windows.MessageBox.Show(owner, text, "Unsaved profile changes", MessageBoxButton.YesNoCancel, MessageBoxImage.Question)
+                : System.Windows.MessageBox.Show(text, "Unsaved profile changes", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+
+            if (answer == MessageBoxResult.Cancel || answer == MessageBoxResult.None) return false;
+            if (answer == MessageBoxResult.No) return true;
+            if (_profileService.SaveProfiles()) return true;
+
+            ShowMainWindow(); // the message bar says why saving failed
+            return false;
+        }
+
+        protected override void OnSessionEnding(SessionEndingCancelEventArgs e)
+        {
+            // Windows is signing out or shutting down
+            if (!IsExiting && !ConfirmUnsavedProfiles(MainWindow)) e.Cancel = true;
+            else IsExiting = true;
+            base.OnSessionEnding(e);
+        }
+
         protected override void OnExit(ExitEventArgs e)
         {
+            // Profile edits are only written on SAVE (or when the user chose Save on exit)
             _hidService?.StopListening();
             _viewModel?.ShutdownNubMouse();
-            _profileService?.SaveProfiles();
             _vJoyService?.Shutdown();
             _notifyIcon?.Dispose();
             base.OnExit(e);

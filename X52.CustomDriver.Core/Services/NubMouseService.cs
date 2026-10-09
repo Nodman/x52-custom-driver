@@ -29,8 +29,17 @@ namespace X52.CustomDriver.Core.Services
         // Settings of the active profile (read on every tick, so edits apply immediately)
         private volatile ThumbMouseSettings _settings = new();
         public ThumbMouseSettings Settings { get => _settings; set => _settings = value ?? new ThumbMouseSettings(); }
-        private bool Enabled => _settings.Enabled;
-        private bool MoveEnabled => _settings.Enabled && _settings.MoveCursor;
+        // Ctrl+Alt+M: -1 = follow the profile, 0 = off, 1 = on (for this session only, never saved)
+        private volatile int _override = -1;
+        public bool? EnabledOverride
+        {
+            get => _override < 0 ? null : _override == 1;
+            set => _override = value == null ? -1 : value.Value ? 1 : 0;
+        }
+        public bool IsEnabled => _override < 0 ? _settings.Enabled : _override == 1;
+
+        private bool Enabled => IsEnabled;
+        private bool MoveEnabled => IsEnabled && _settings.MoveCursor;
         private double Speed => Math.Clamp(_settings.Speed, 50, 6000);
         private double Deadzone => Math.Clamp(_settings.Deadzone, 0, 4);
 
@@ -115,7 +124,7 @@ namespace X52.CustomDriver.Core.Services
             {
                 if (!_running) return;
                 var cfg = _settings;
-                bool on = cfg.Enabled;
+                bool on = IsEnabled;
 
                 // Each mouse function can be switched on/off separately; a disabled one is released
                 bool left = on && cfg.LeftClick && primary;

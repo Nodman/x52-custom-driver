@@ -234,7 +234,11 @@ namespace X52.CustomDriver.App.ViewModels
             get => _currentProfile;
             set
             {
-                if (!ReferenceEquals(_currentProfile, value)) ReleaseAllMappedKeys();
+                if (!ReferenceEquals(_currentProfile, value))
+                {
+                    ReleaseAllMappedKeys();
+                    _nubMouse.EnabledOverride = null; // a new profile starts with its own mouse setting
+                }
                 _currentProfile = value;
                 WatchMouse(EnsureMouseSettings(value));
                 OnPropertyChanged();
@@ -275,18 +279,36 @@ namespace X52.CustomDriver.App.ViewModels
             _nubMouse.Settings = settings;
         }
 
-        private void WatchedMouse_PropertyChanged(object? sender, PropertyChangedEventArgs e) => OnPropertyChanged(nameof(NubMouseStatus));
-
-        /// <summary>Ctrl+Alt+M: switch the thumb stick mouse of the active profile on/off.</summary>
-        public void ToggleNubMouse()
+        private void WatchedMouse_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            var m = EnsureMouseSettings(CurrentProfile);
-            m.Enabled = !m.Enabled;
-            _profileService.SaveProfiles();
+            // Switching the profile's own checkbox ends a Ctrl+Alt+M override
+            if (e.PropertyName == nameof(ThumbMouseSettings.Enabled)) _nubMouse.EnabledOverride = null;
             OnPropertyChanged(nameof(NubMouseStatus));
         }
 
-        public string NubMouseStatus => EnsureMouseSettings(CurrentProfile).Enabled ? "ON" : "OFF";
+        /// <summary>
+        /// Ctrl+Alt+M: switch the thumb stick mouse on/off right now. Only for this session (until the
+        /// profile changes or the driver restarts); it isn't a profile edit and is never saved.
+        /// </summary>
+        public void ToggleNubMouse()
+        {
+            bool profileSetting = EnsureMouseSettings(CurrentProfile).Enabled;
+            bool now = !_nubMouse.IsEnabled;
+            _nubMouse.EnabledOverride = now == profileSetting ? null : now;
+            OnPropertyChanged(nameof(NubMouseStatus));
+        }
+
+        public string NubMouseStatus => !_nubMouse.IsEnabled
+            ? (_nubMouse.EnabledOverride != null ? "OFF (Ctrl+Alt+M)" : "OFF")
+            : (_nubMouse.EnabledOverride != null ? "ON (Ctrl+Alt+M)" : "ON");
+
+        // --- Unsaved profile edits (edits apply live; SAVE writes them) ---
+
+        public bool HasUnsavedProfiles => _profileService.HasUnsavedChanges;
+        public string ProfilesTabHeader => HasUnsavedProfiles ? "PROFILES ●" : "PROFILES";
+
+        /// <summary>Re-check which profiles differ from what's saved (called after edits).</summary>
+        public void RefreshUnsavedProfiles() => _profileService.RefreshUnsavedFlags();
 
         public string ProfileName => CurrentProfile.Name;
 
@@ -368,6 +390,11 @@ namespace X52.CustomDriver.App.ViewModels
             _profileService.SaveFailed += (s, msg) => ShowBanner(msg, isError: true, fromSave: true);
             _settingsService.SaveFailed += (s, msg) => ShowBanner(msg, isError: true, fromSave: true);
             _profileService.Saved += (s, e) => ClearSaveError();
+            _profileService.UnsavedChanged += (s, e) =>
+            {
+                OnPropertyChanged(nameof(HasUnsavedProfiles));
+                OnPropertyChanged(nameof(ProfilesTabHeader));
+            };
             _settingsService.Saved += (s, e) => ClearSaveError();
             var notices = new[] { _profileService.LoadNotice, _settingsService.LoadNotice }.Where(n => !string.IsNullOrEmpty(n)).ToList();
             if (notices.Count > 0) ShowBanner(string.Join(" ", notices), isError: false);
