@@ -405,7 +405,7 @@ namespace X52.CustomDriver.App.ViewModels
                     CurrentMode = last.CurrentMode,
                     RawData = new byte[Math.Max(last.RawData?.Length ?? 0, 14)]
                 });
-                System.Windows.Application.Current?.Dispatcher.BeginInvoke(new Action(() => OnPropertyChanged(nameof(IsConnected))));
+                System.Windows.Application.Current?.Dispatcher.BeginInvoke(new Action(() => { OnPropertyChanged(nameof(IsConnected)); OnPropertyChanged(nameof(X52ModelText)); }));
             };
 
             _hidService.OnStateChanged += (s, e) =>
@@ -426,7 +426,7 @@ namespace X52.CustomDriver.App.ViewModels
                     OnPropertyChanged(nameof(Rotary1Percent));
                     OnPropertyChanged(nameof(Rotary2Percent));
                     OnPropertyChanged(nameof(SliderPercent));
-                    OnPropertyChanged(nameof(IsConnected));
+                    OnPropertyChanged(nameof(IsConnected)); OnPropertyChanged(nameof(X52ModelText));
                     OnPropertyChanged(nameof(IsVJoyActive));
                     OnPropertyChanged(nameof(RawDataString));
                     OnPropertyChanged(nameof(NubDisplay));
@@ -780,6 +780,11 @@ namespace X52.CustomDriver.App.ViewModels
 
         public SettingsService Settings => _settingsService;
         public bool IsX52Connected => _hidService.IsConnected;
+
+        /// <summary>Which stick is connected. X52 Pro support follows libx52 but hasn't been tested on a real Pro.</summary>
+        public string X52ModelText => !_hidService.IsConnected ? "X52 not connected"
+            : _hidService.ModelName.EndsWith("Pro") ? _hidService.ModelName + "  (Pro support untested – please report issues)"
+            : _hidService.ModelName;
 
         public static string? FindVJoyTool(string exeName)
         {

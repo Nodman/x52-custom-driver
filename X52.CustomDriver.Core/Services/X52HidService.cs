@@ -13,6 +13,7 @@ namespace X52.CustomDriver.Core.Services
         private const int VID = 0x06A3;
         private const int PID_Pro = 0x0762;
         private const int PID_Std = 0x075C;
+        private const int PID_Std_Old = 0x0255; // first X52 revision, same report as PID_Std (libx52)
 
         private HidDevice? _device;
         private int _currentPid;
@@ -27,8 +28,11 @@ namespace X52.CustomDriver.Core.Services
         private int _xMin = 50, _xMax = 2000, _xCenter = 1012;
         private int _yMin = 50, _yMax = 2000, _yCenter = 1012;
         private int _lastRawX = 1012, _lastRawY = 1012, _lastRawZ = 508;
+        private int _lastMode = 1;
 
         public bool IsConnected => _device != null && _device.IsOpen;
+
+        public string ModelName => _currentPid == PID_Pro ? "Saitek X52 Pro" : "Saitek X52";
 
         public string? DeviceInstanceId => DevicePathToInstanceId(_device?.DevicePath);
 
@@ -57,7 +61,8 @@ namespace X52.CustomDriver.Core.Services
         {
             error = null;
             var device = HidDevices.Enumerate(VID, PID_Pro).FirstOrDefault()
-                      ?? HidDevices.Enumerate(VID, PID_Std).FirstOrDefault();
+                      ?? HidDevices.Enumerate(VID, PID_Std).FirstOrDefault()
+                      ?? HidDevices.Enumerate(VID, PID_Std_Old).FirstOrDefault();
             if (device == null)
             {
                 error = "X52 Device not found.";
@@ -181,22 +186,23 @@ namespace X52.CustomDriver.Core.Services
 
             if (d == null || d.Length < 14) return state; 
             
-            int rawX, rawY, rawZ;
-
-            if (_currentPid == PID_Std)
+            // Axis bit layout from libx52 (https://github.com/nirenjan/libx52, libx52io/parser.c):
+            //   X52:     X = bits 0-10 (11 bit), Y = bits 11-21 (11 bit), Rz = bits 22-31 (10 bit)
+            //   X52 Pro: X = bits 0-9  (10 bit), Y = bits 10-19 (10 bit), Rz = bits 22-31 (10 bit)
+            // The Pro's 10-bit X/Y are doubled so everything after this works on one 0..2047 range.
+            uint axis = (uint)(d[0] | (d[1] << 8) | (d[2] << 16) | (d[3] << 24));
+            int rawX, rawY;
+            if (_currentPid == PID_Pro)
             {
-                // X52 Standard Bits (Corrected X/Y/Z)
-                rawX = d[0] | ((d[1] & 0x07) << 8);
-                rawY = ((d[1] & 0xF8) >> 3) | ((d[2] & 0x3F) << 5);
-                rawZ = (d[2] & 0x03) | (d[3] << 2);
+                rawX = (int)(axis & 0x3FF) * 2;
+                rawY = (int)((axis >> 10) & 0x3FF) * 2;
             }
             else
             {
-                // X52 Pro Bits
-                rawX = d[0] | ((d[1] & 0x07) << 8);
-                rawY = ((d[1] & 0xF8) >> 3) | ((d[2] & 0x3F) << 5);
-                rawZ = ((d[2] & 0xC0) >> 6) | (d[3] << 2);
+                rawX = (int)(axis & 0x7FF);
+                rawY = (int)((axis >> 11) & 0x7FF);
             }
+            int rawZ = (int)((axis >> 22) & 0x3FF);
 
             _lastRawX = rawX; _lastRawY = rawY; _lastRawZ = rawZ;
 
@@ -204,7 +210,6 @@ namespace X52.CustomDriver.Core.Services
             state.Rotary1 = d[5];
             state.Rotary2 = d[6];
             state.Slider = d[7];
-            state.Pinkie = (d[8] & 0x20) != 0;
 
             // Calibration & Smoothing
             if (rawX < _xMin && rawX > 10) _xMin = rawX;
@@ -220,140 +225,17 @@ namespace X52.CustomDriver.Core.Services
             state.Y = NormalizeAxis(rawY, _yMin, _yMax, _yCenter, 2048, 40);
             state.Z = NormalizeAxis((int)_lastZ, _zMin, _zMax, _zCenter, 1024, 60); 
 
-            // Mode detection
-            int detectedMode = 1;
-            if (_currentPid == PID_Pro) 
-            {
-                int proBits = (state.RawData[8] & 0x06) >> 1;
-                detectedMode = proBits + 1;
-                
-                state.Trigger = (d[8] & 0x01) != 0;
-                state.ButtonFire = (d[8] & 0x02) != 0;
-                state.ButtonA = (d[8] & 0x04) != 0;
-                state.ButtonB = (d[8] & 0x08) != 0;
-                state.ButtonC = (d[8] & 0x10) != 0;
-                state.Pinkie = (d[8] & 0x20) != 0;
-                state.ButtonD = (d[8] & 0x40) != 0;
-                state.ButtonE = (d[8] & 0x80) != 0;
+            // While the mode dial is between two positions no mode bit is set: keep the last mode
+            state.CurrentMode = _lastMode;
 
-                state.T1 = (d[9] & 0x01) != 0;
-                state.T2 = (d[9] & 0x02) != 0;
-                state.T3 = (d[9] & 0x04) != 0;
-                state.T4 = (d[9] & 0x08) != 0;
-                state.T5 = (d[9] & 0x10) != 0;
-                state.T6 = (d[9] & 0x20) != 0;
-                state.TriggerStage2 = (d[9] & 0x40) != 0;
-                
-                state.Hat1Up = (d[9] & 0x80) != 0;
-                state.Hat1Down = (d[10] & 0x02) != 0;
-                state.Hat1Left = (d[10] & 0x04) != 0;
-                state.Hat1Right = (d[10] & 0x01) != 0;
-
-                state.HatRearUp = (d[10] & 0x08) != 0;
-                state.HatRearRight = (d[10] & 0x10) != 0;
-                state.HatRearDown = (d[10] & 0x20) != 0;
-                state.HatRearLeft = (d[10] & 0x40) != 0;
-
-                state.MfdFunction = (d[11] & 0x04) != 0;
-                state.MfdStartStop = (d[11] & 0x08) != 0;
-                state.MfdReset = (d[11] & 0x10) != 0;
-                state.ClutchButton = (d[11] & 0x20) != 0;
-                state.MouseLeftClick = (d[11] & 0x40) != 0;
-                state.MouseNubClick = (d[11] & 0x02) != 0;
-                state.MouseWheelClick = (d[11] & 0x80) != 0;
-            } 
-            else 
-            {
-                // X52 Standard Mode Detection
-                if ((d[11] & 0x01) != 0) detectedMode = 2;
-                else if ((d[11] & 0x02) != 0) detectedMode = 3;
-                else detectedMode = 1;
-
-                state.Trigger = (d[8] & 0x01) != 0;
-                state.ButtonFire = (d[8] & 0x02) != 0;
-                state.ButtonA = (d[8] & 0x04) != 0;
-                state.ButtonB = (d[8] & 0x08) != 0;
-                state.ButtonC = (d[8] & 0x10) != 0;
-                state.Pinkie = (d[8] & 0x20) != 0;
-                state.ButtonD = (d[8] & 0x40) != 0;
-                state.ButtonE = (d[8] & 0x80) != 0;
-
-                state.T1 = (d[9] & 0x01) != 0;
-                state.T2 = (d[9] & 0x02) != 0;
-                state.T3 = (d[9] & 0x04) != 0;
-                state.T4 = (d[9] & 0x08) != 0;
-                state.T5 = (d[9] & 0x10) != 0;
-                state.T6 = (d[9] & 0x20) != 0;
-                state.TriggerStage2 = (d[9] & 0x40) != 0;
-                
-                state.Hat1Up = (d[9] & 0x80) != 0;
-                state.Hat1Down = (d[10] & 0x02) != 0;
-                state.Hat1Left = (d[10] & 0x04) != 0;
-                state.Hat1Right = (d[10] & 0x01) != 0;
-
-                state.HatRearUp = (d[10] & 0x10) != 0;
-                state.HatRearRight = (d[10] & 0x08) != 0;
-                state.HatRearDown = (d[10] & 0x20) != 0;
-                state.HatRearLeft = (d[10] & 0x40) != 0;
-
-                // Standard MFD and Mouse clicks (Avoiding Byte 11 bits 0 and 1 which are Modes)
-                state.MfdFunction = (d[11] & 0x04) != 0;
-                state.MfdStartStop = (d[11] & 0x08) != 0;
-                state.MfdReset = (d[11] & 0x10) != 0;
-                state.ClutchButton = (d[11] & 0x20) != 0;
-                state.MouseLeftClick = (d[11] & 0x40) != 0;
-                state.MouseWheelClick = (d[11] & 0x80) != 0;
-                
-                // --- X52 STANDARD - HAT 2 / MOUSE NUB SEPARATION (v1.1.5 SILVER BULLET) ---
-                // DIAGNOSIS: 
-                // - Byte 13 (Nub Y) is noisy and linked to buttons 29/30. MUST BE KILLED to stop interference.
-                // - Byte 12 (Hat 2) uses discrete values (multiples of 16).
-                //   Up=16, Down=80, Left=112, Right=48. Rest=0.
-                // ACTION: 
-                // 1. Byte 13: COMPLETELY IGNORED.
-                // 2. Byte 12: Discrete exact mapping.
-
-                int val12 = (int)d[12];
-
-                // Precise Mapping for Hat 2
-                state.Hat2Up = (val12 == 16);
-                state.Hat2Down = (val12 == 80);
-                state.Hat2Left = (val12 == 112);
-                state.Hat2Right = (val12 == 48);
-
-                // Internal Mouse Axes (Stick/Nub) -> FORCE TO 0 to prevent ghosting
-                state.MouseX = 0;
-                state.MouseY = 0;
-                
-                // ANNIHILATION: Force internal mouse axes to 0
-                state.MouseWheelUp = false;
-                state.MouseWheelDown = false;
-            }
-            state.CurrentMode = detectedMode;
-
-            // Named buttons, hats and mode, decoded with the bit layout from libx52
-            // (https://github.com/nirenjan/libx52). The parsing above only covered part of the
-            // standard X52 and used wrong positions for most X52 Pro buttons.
+            // Buttons, hats, mode and mouse wheel, decoded with the bit layout from libx52
             DecodeButtons(d, state);
+            _lastMode = state.CurrentMode;
 
-            // Only update Mouse axes for Pro model. Standard stays zeroed to avoid interference.
-            if (_currentPid == PID_Pro)
-            {
-                state.MouseWheelUp = (d[12] & 0x02) != 0;
-                state.MouseWheelDown = (d[12] & 0x01) != 0;
-                state.MouseX = (sbyte)d[13];
-                state.MouseY = (sbyte)d[12];
-                state.MouseNubClick = (d[11] & 0x02) != 0;
-            }
-            else
-            {
-                // Extra safety: ensure Standard model never leaks mouse data from the global section
-                state.MouseX = 0;
-                state.MouseY = 0;
-                state.MouseWheelUp = false;
-                state.MouseWheelDown = false;
-            }
-            
+            // The thumb stick is read by NubMouseService straight from the report
+            state.MouseX = 0;
+            state.MouseY = 0;
+
             return state;
         }
 

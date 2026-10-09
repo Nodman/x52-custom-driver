@@ -7,6 +7,9 @@ namespace X52.CustomDriver.Core.Interfaces
     {
         bool IsConnected { get; }
 
+        // "Saitek X52" or "Saitek X52 Pro" (the last one connected)
+        string ModelName { get; }
+
         // Windows device instance ID of the connected stick, e.g. HID\VID_06A3&PID_075C\7&1A2B3C&0&0000
         string? DeviceInstanceId { get; }
         void Initialize();

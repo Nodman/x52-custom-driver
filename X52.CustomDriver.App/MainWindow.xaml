@@ -273,7 +273,7 @@
                                             </Style>
                                         </Ellipse.Style>
                                     </Ellipse>
-                                    <TextBlock Text="X52 Hardware" FontSize="12"/>
+                                    <TextBlock Text="{Binding X52ModelText}" FontSize="12" TextWrapping="Wrap" MaxWidth="260"/>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,5">
                                     <Ellipse Width="10" Height="10" VerticalAlignment="Center" Margin="0,0,10,0">
