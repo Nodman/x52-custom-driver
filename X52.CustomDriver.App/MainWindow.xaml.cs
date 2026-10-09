@@ -144,16 +144,21 @@ namespace X52.CustomDriver.App
             catch (Exception ex) { VJoyMessage.Text = ex.Message; }
         }
 
+        private async void SetUpVJoy_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is not X52ViewModel vm) return;
+            SetUpVJoyButton.IsEnabled = false;
+            VJoyMessage.Foreground = System.Windows.Media.Brushes.Gray;
+            VJoyMessage.Text = "Waiting for admin permission… vJoy restarts its device, games may lose it for a moment.";
+            string error = await vm.SetUpVJoyAsync();
+            VJoyMessage.Foreground = error.Length == 0 ? System.Windows.Media.Brushes.LightGreen : System.Windows.Media.Brushes.IndianRed;
+            VJoyMessage.Text = error.Length == 0 ? "✓ vJoy is set up: 128 buttons and the hat. Restart games that were running." : error;
+            SetUpVJoyButton.IsEnabled = true;
+        }
+
         private void OpenVJoyConf_Click(object sender, RoutedEventArgs e)
         {
-            string pf = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-            string[] candidates =
-            {
-                System.IO.Path.Combine(pf, "vJoy", "x64", "vJoyConf.exe"),
-                System.IO.Path.Combine(pf, "vJoy", "vJoyConf.exe"),
-                System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "vJoy", "vJoyConf.exe")
-            };
-            var exe = candidates.FirstOrDefault(System.IO.File.Exists);
+            var exe = X52ViewModel.FindVJoyTool("vJoyConf.exe");
             if (exe == null)
             {
                 VJoyMessage.Text = "Configure vJoy wasn't found. Open it from the Start menu (search \"Configure vJoy\").";

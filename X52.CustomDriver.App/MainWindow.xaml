@@ -16,7 +16,7 @@
                         </Grid.ColumnDefinitions>
 
                     <StackPanel Grid.Column="0">
-                        <TextBlock Text="Ærakon x52 driver v1.3.1" FontSize="20" FontWeight="Bold" Foreground="#00D2FF" Margin="0,0,0,20"/>
+                        <TextBlock Text="Ærakon x52 driver v1.3.2" FontSize="20" FontWeight="Bold" Foreground="#00D2FF" Margin="0,0,0,20"/>
 
                         <TextBlock Text="PRIMARY AXES" FontWeight="Bold" Margin="0,10,0,10" Foreground="#555"/>
                         <Grid>
@@ -328,6 +328,8 @@
                                 <TextBlock FontSize="11" Foreground="#666" TextWrapping="Wrap" Margin="26,0,0,12"
                                            Text="Off: every mode uses buttons 1–31. The stick-top hat is POV 1. Windows' Game Controllers window only shows the first 32 buttons."/>
                                 <StackPanel Orientation="Horizontal">
+                                    <Button x:Name="SetUpVJoyButton" Content="SET UP VJOY" Style="{StaticResource NeonButton}" Margin="0,0,10,0" Click="SetUpVJoy_Click"
+                                            ToolTip="Sets vJoy device 1 to 8 axes, 128 buttons and 1 continuous POV hat (asks for admin permission once)"/>
                                     <Button Content="OPEN GAME CONTROLLERS" Style="{StaticResource NeonButton}" Margin="0,0,10,0" Click="OpenJoyCpl_Click"
                                             ToolTip="Opens joy.cpl to test the virtual stick"/>
                                     <Button Content="CONFIGURE VJOY" Style="{StaticResource NeonButton}" Click="OpenVJoyConf_Click"

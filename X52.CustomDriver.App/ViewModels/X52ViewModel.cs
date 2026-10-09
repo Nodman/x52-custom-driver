@@ -592,10 +592,84 @@ namespace X52.CustomDriver.App.ViewModels
                 string pov = cont > 0 ? $"{cont} continuous POV hat(s)" : disc > 0 ? $"{disc} 4-way POV hat(s)" : "no POV hat";
                 int needed = _settingsService.CurrentSettings.ModeShiftsButtons ? 3 * ButtonsPerBank : VJoyButtonLayout.Length;
                 string advice = buttons < needed || (cont == 0 && disc == 0)
-                    ? $"  → In Configure vJoy set device 1 to {(needed > 32 ? 128 : 32)} buttons and 1 continuous POV, then restart this driver."
+                    ? "  → Click SET UP VJOY below to fix this automatically."
                     : "  ✓ Enough for every X52 button" + (cont > 0 ? " and the 8-way hat." : ".");
                 return $"vJoy device #1: {buttons} buttons, {pov}.{advice}";
             }
+        }
+
+        public bool VJoyNeedsSetup
+        {
+            get
+            {
+                if (!_vJoyService.IsAvailable) return true;
+                int needed = _settingsService.CurrentSettings.ModeShiftsButtons ? 3 * ButtonsPerBank : VJoyButtonLayout.Length;
+                return _vJoyService.ButtonCount < needed || (_vJoyService.ContinuousPovCount == 0 && _vJoyService.DiscretePovCount == 0);
+            }
+        }
+
+        /// <summary>
+        /// Reconfigure vJoy device 1 for the X52 with vJoy's own command-line tool:
+        /// all 8 axes, 128 buttons, 1 continuous POV. Needs admin rights (one UAC prompt).
+        /// </summary>
+        public async Task<string> SetUpVJoyAsync()
+        {
+            string? tool = FindVJoyTool("vJoyConfig.exe");
+            if (tool == null) return "vJoyConfig.exe wasn't found. Is vJoy installed in Program Files\\vJoy?";
+
+            // Let go of the device while vJoy rebuilds it
+            for (int n = 1; n <= 128; n++) _vjoyPressed[n] = false;
+            _vJoyService.Shutdown();
+
+            string error = await Task.Run(() =>
+            {
+                try
+                {
+                    var psi = new System.Diagnostics.ProcessStartInfo(tool, "1 -f -a x y z rx ry rz sl0 sl1 -b 128 -p 1")
+                    {
+                        UseShellExecute = true,
+                        Verb = "runas",
+                        WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden
+                    };
+                    using var p = System.Diagnostics.Process.Start(psi);
+                    if (p == null) return "Could not start vJoyConfig.";
+                    if (!p.WaitForExit(60000)) return "vJoyConfig did not finish in time.";
+                    return "";
+                }
+                catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223)
+                {
+                    return "Cancelled – admin permission is needed to change vJoy.";
+                }
+                catch (Exception ex) { return ex.Message; }
+            });
+
+            // vJoy restarts its device; give Windows a moment, then take it again
+            for (int attempt = 0; attempt < 10 && !_vJoyService.IsAvailable; attempt++)
+            {
+                await Task.Delay(1000);
+                _vJoyService.Initialize(1);
+            }
+
+            OnPropertyChanged(nameof(IsVJoyActive));
+            OnPropertyChanged(nameof(VJoyInfoText));
+            OnPropertyChanged(nameof(VJoyNeedsSetup));
+            if (error.Length > 0) return error;
+            if (!_vJoyService.IsAvailable) return "vJoy was changed but the device didn't come back. Restart this driver.";
+            return VJoyNeedsSetup ? "vJoyConfig ran but the device still reports too few buttons. Try Configure vJoy." : "";
+        }
+
+        public static string? FindVJoyTool(string exeName)
+        {
+            string pf = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            string pf86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+            string[] candidates =
+            {
+                System.IO.Path.Combine(pf, "vJoy", "x64", exeName),
+                System.IO.Path.Combine(pf, "vJoy", exeName),
+                System.IO.Path.Combine(pf86, "vJoy", "x64", exeName),
+                System.IO.Path.Combine(pf86, "vJoy", exeName)
+            };
+            return candidates.FirstOrDefault(System.IO.File.Exists);
         }
 
         public bool ModeShiftsButtons
@@ -609,6 +683,7 @@ namespace X52.CustomDriver.App.ViewModels
                 _settingsService.SaveSettings();
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(VJoyInfoText));
+                OnPropertyChanged(nameof(VJoyNeedsSetup));
             }
         }
 

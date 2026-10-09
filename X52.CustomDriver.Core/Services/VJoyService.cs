@@ -96,6 +96,7 @@ namespace X52.CustomDriver.Core.Services
         public bool Initialize(uint deviceId)
         {
             DeviceId = deviceId;
+            _lastPov = int.MinValue;
             try
             {
                 // Path to NuGet package DLL - make this relative or config driven in production
