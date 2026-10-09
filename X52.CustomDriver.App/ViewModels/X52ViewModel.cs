@@ -203,6 +203,19 @@ namespace X52.CustomDriver.App.ViewModels
 
         public string NubDisplay => $"X {_nubMouse.RawX,3}   Y {_nubMouse.RawY,3}";
 
+        /// <summary>
+        /// Let go of every key and mouse button this driver is holding. Safe from any thread;
+        /// used by the crash handlers so an error never leaves input stuck down.
+        /// </summary>
+        public void EmergencyReleaseInput()
+        {
+            try { _keyboardService.ReleaseAll(); } catch { }
+            try { _nubMouse.Reset(); } catch { }
+            var d = System.Windows.Application.Current?.Dispatcher;
+            if (d != null && d.CheckAccess()) _heldMappings.Clear();
+            else d?.BeginInvoke(new Action(() => _heldMappings.Clear()));
+        }
+
         public void ShutdownNubMouse()
         {
             _nubMouse.Dispose();

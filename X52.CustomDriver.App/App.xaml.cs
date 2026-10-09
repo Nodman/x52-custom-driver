@@ -84,6 +84,21 @@ namespace X52.CustomDriver.App
             _logPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "startup_log.txt");
             Log("--- Startup Log ---", overwrite: true);
 
+            // Safety net: whatever goes wrong, never leave keys or mouse buttons stuck down
+            DispatcherUnhandledException += (s, args) =>
+            {
+                ReleaseInputAndLog("UI error", args.Exception);
+                args.Handled = true; // keep running; the error is shown in the message bar
+                _viewModel?.ShowBanner($"Something went wrong: {args.Exception.Message} Held keys and mouse buttons were released. Details: {CrashLogPath}", isError: true);
+            };
+            AppDomain.CurrentDomain.UnhandledException += (s, args) =>
+                ReleaseInputAndLog("Fatal error", args.ExceptionObject as Exception);
+            System.Threading.Tasks.TaskScheduler.UnobservedTaskException += (s, args) =>
+            {
+                ReleaseInputAndLog("Background task error", args.Exception);
+                args.SetObserved();
+            };
+
             try
             {
                 Log("Initializing Services...\n");
@@ -179,6 +194,20 @@ namespace X52.CustomDriver.App
                 System.Windows.MessageBox.Show(error, "X52 Driver Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 System.Windows.Application.Current.Shutdown();
             }
+        }
+
+        private static string CrashLogPath => System.IO.Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AerakonX52Driver", "crash.log");
+
+        private void ReleaseInputAndLog(string kind, Exception? ex)
+        {
+            try { _viewModel?.EmergencyReleaseInput(); } catch { }
+            try
+            {
+                System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(CrashLogPath)!);
+                System.IO.File.AppendAllText(CrashLogPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {kind}: {ex}\n\n");
+            }
+            catch { }
         }
 
         private void ShowMainWindow()

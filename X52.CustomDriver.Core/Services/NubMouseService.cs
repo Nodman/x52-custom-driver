@@ -65,6 +65,7 @@ namespace X52.CustomDriver.Core.Services
         /// <summary>Feed every raw HID report here.</summary>
         public void Update(byte[]? data, int productId)
         {
+            if (!_running) return; // shutting down: a late report must not press a button again
             if (data == null) return;
 
             // Never act on an all-zero buffer: that is what a read returns when the stick is unplugged,
@@ -112,6 +113,7 @@ namespace X52.CustomDriver.Core.Services
         {
             lock (_buttonLock)
             {
+                if (!_running) return;
                 var cfg = _settings;
                 bool on = cfg.Enabled;
 
@@ -181,7 +183,10 @@ namespace X52.CustomDriver.Core.Services
                 double age = (double)(Stopwatch.GetTimestamp() - Interlocked.Read(ref _lastReportTicks)) / Stopwatch.Frequency;
                 if (age > StaleSeconds)
                 {
+                    // No reports for a while (USB suspend, read errors): stop the cursor and
+                    // let go of any held mouse button too
                     accX = accY = 0;
+                    lock (_buttonLock) ReleaseButtons();
                     continue;
                 }
 
