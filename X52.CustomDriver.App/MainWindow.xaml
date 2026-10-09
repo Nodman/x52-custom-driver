@@ -293,10 +293,7 @@
 
                         <TextBlock Text="KEY MAPPINGS" Style="{StaticResource SectionHeader}"/>
                         <Border Style="{StaticResource Card}">
-                            <DockPanel>
-                                <TextBlock Text="Holding:" FontSize="11" Foreground="#888" Margin="0,0,10,0"/>
-                                <TextBlock Text="{Binding HeldKeysText}" FontSize="12" FontFamily="Consolas" Foreground="#00D2FF" TextWrapping="Wrap"/>
-                            </DockPanel>
+                            <TextBlock Text="{Binding MappingActivityText}" FontSize="12" FontFamily="Consolas" Foreground="#00D2FF" TextWrapping="Wrap"/>
                         </Border>
 
                         <TextBlock Text="CALIBRATION" FontWeight="Bold" Margin="0,25,0,10" Foreground="#555"/>
@@ -322,20 +319,20 @@
 
             <TabItem Header="SETTINGS">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel MaxWidth="560" HorizontalAlignment="Left">
+                    <StackPanel MaxWidth="820" HorizontalAlignment="Left">
                         <TextBlock Text="HIDE REAL X52 FROM GAMES" Style="{StaticResource SectionHeader}" Margin="0,5,0,10"/>
                         <Border Style="{StaticResource Card}">
                             <StackPanel>
                                 <TextBlock FontSize="11" Foreground="#888" TextWrapping="Wrap" Margin="0,0,0,10"
                                            Text="Without this, games see two joysticks: the real X52 and the Ærakon virtual stick, so every input arrives twice. HidHide hides the real X52 from every program except this driver."/>
                                 <TextBlock Text="{Binding HideRealX52Status}" FontSize="12" Foreground="#00D2FF" TextWrapping="Wrap" Margin="0,0,0,12"/>
-                                <StackPanel Orientation="Horizontal">
-                                    <Button x:Name="HideX52Button" Content="HIDE REAL X52" Style="{StaticResource NeonButton}" Margin="0,0,10,0" Click="HideX52_Click"
+                                <WrapPanel>
+                                    <Button x:Name="HideX52Button" Content="HIDE REAL X52" Style="{StaticResource NeonButton}" Margin="0,0,10,8" Click="HideX52_Click"
                                             ToolTip="Windows will ask for admin permission once"/>
-                                    <Button x:Name="ShowX52Button" Content="SHOW IT AGAIN" Style="{StaticResource DangerButton}" Margin="0,0,10,0" Click="ShowX52_Click"/>
-                                    <Button x:Name="GetHidHideButton" Content="GET HIDHIDE" Style="{StaticResource NeonButton}" Click="GetHidHide_Click"
+                                    <Button x:Name="ShowX52Button" Content="SHOW IT AGAIN" Style="{StaticResource DangerButton}" Margin="0,0,10,8" Click="ShowX52_Click"/>
+                                    <Button x:Name="GetHidHideButton" Content="GET HIDHIDE" Style="{StaticResource NeonButton}" Margin="0,0,10,8" Click="GetHidHide_Click"
                                             ToolTip="Opens the official HidHide download page (free, by Nefarius)"/>
-                                </StackPanel>
+                                </WrapPanel>
                                 <TextBlock x:Name="HideX52Message" FontSize="11" Foreground="#FF5555" TextWrapping="Wrap" Margin="0,8,0,0"/>
                             </StackPanel>
                         </Border>
@@ -348,16 +345,16 @@
                                           Content="Mode dial shifts buttons (mode 1 = 1–32, mode 2 = 33–64, mode 3 = 65–96)"/>
                                 <TextBlock FontSize="11" Foreground="#666" TextWrapping="Wrap" Margin="26,0,0,12"
                                            Text="Off: every mode uses buttons 1–31. The stick-top hat is POV 1. Windows' Game Controllers window only shows the first 32 buttons."/>
-                                <StackPanel Orientation="Horizontal">
-                                    <Button x:Name="SetUpVJoyButton" Content="SET UP VJOY" Style="{StaticResource NeonButton}" Margin="0,0,10,0" Click="SetUpVJoy_Click"
+                                <WrapPanel>
+                                    <Button x:Name="SetUpVJoyButton" Content="SET UP VJOY" Style="{StaticResource NeonButton}" Margin="0,0,10,8" Click="SetUpVJoy_Click"
                                             ToolTip="Sets vJoy device 1 to 8 axes, 128 buttons and 1 continuous POV hat (asks for admin permission once)"/>
-                                    <Button Content="OPEN GAME CONTROLLERS" Style="{StaticResource NeonButton}" Margin="0,0,10,0" Click="OpenJoyCpl_Click"
+                                    <Button Content="OPEN GAME CONTROLLERS" Style="{StaticResource NeonButton}" Margin="0,0,10,8" Click="OpenJoyCpl_Click"
                                             ToolTip="Opens joy.cpl to test the virtual stick"/>
-                                    <Button Content="CONFIGURE VJOY" Style="{StaticResource NeonButton}" Margin="0,0,10,0" Click="OpenVJoyConf_Click"
+                                    <Button Content="CONFIGURE VJOY" Style="{StaticResource NeonButton}" Margin="0,0,10,8" Click="OpenVJoyConf_Click"
                                             ToolTip="Set the number of buttons and POV hats of vJoy device 1"/>
-                                    <Button Content="VJOY MONITOR" Style="{StaticResource NeonButton}" Click="OpenVJoyMonitor_Click"
+                                    <Button Content="VJOY MONITOR" Style="{StaticResource NeonButton}" Margin="0,0,10,8" Click="OpenVJoyMonitor_Click"
                                             ToolTip="vJoy's own monitor: shows all axes, 128 buttons and POV hats of the virtual stick"/>
-                                </StackPanel>
+                                </WrapPanel>
                                 <TextBlock x:Name="VJoyMessage" FontSize="11" Foreground="#FF5555" TextWrapping="Wrap" Margin="0,8,0,0"/>
                             </StackPanel>
                         </Border>

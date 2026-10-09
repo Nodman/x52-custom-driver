@@ -366,7 +366,7 @@ namespace X52.CustomDriver.App.ViewModels
                     OnPropertyChanged(nameof(IsVJoyActive));
                     OnPropertyChanged(nameof(RawDataString));
                     OnPropertyChanged(nameof(NubDisplay));
-                    OnPropertyChanged(nameof(HeldKeysText));
+                    OnPropertyChanged(nameof(MappingActivityText));
                     OnPropertyChanged(nameof(IsMode1));
                     OnPropertyChanged(nameof(IsMode2));
                     OnPropertyChanged(nameof(IsMode3));
@@ -445,6 +445,7 @@ namespace X52.CustomDriver.App.ViewModels
                 {
                     case "tap":
                         _keyboardService.Tap(mapping.KeySequence);
+                        ShowTap(mapping);
                         break;
 
                     case "toggle":
@@ -474,12 +475,38 @@ namespace X52.CustomDriver.App.ViewModels
         }
 
         /// <summary>Let go of every key held by a mapping (profile switch, unplug, exit).</summary>
-        public string HeldKeysText
+        // Last Tap, shown for a moment on the LIVE tab (a tap only lasts ~50 ms)
+        private string? _lastTapLine;
+        private DateTime _lastTapAt;
+        private System.Windows.Threading.DispatcherTimer? _tapTimer;
+
+        private void ShowTap(ButtonMapping m)
+        {
+            _lastTapLine = $"Tap         {ButtonCatalog.Label(m.ButtonName)} → {string.Join("+", m.KeySequence ?? new List<string>())}";
+            _lastTapAt = DateTime.UtcNow;
+            _tapTimer ??= new System.Windows.Threading.DispatcherTimer(TimeSpan.FromSeconds(1.6),
+                System.Windows.Threading.DispatcherPriority.Background,
+                (s, e) => { _tapTimer!.Stop(); OnPropertyChanged(nameof(MappingActivityText)); },
+                System.Windows.Application.Current.Dispatcher);
+            _tapTimer.Stop();
+            _tapTimer.Start();
+            OnPropertyChanged(nameof(MappingActivityText));
+        }
+
+        /// <summary>What key mappings are doing right now, one line per active mapping, with its action.</summary>
+        public string MappingActivityText
         {
             get
             {
-                string keys = _keyboardService.HeldKeysText;
-                return keys.Length == 0 ? "none" : keys;
+                var lines = new List<string>();
+                foreach (var held in _heldMappings)
+                {
+                    bool toggle = string.Equals(held.Key.Action, "Toggle", StringComparison.OrdinalIgnoreCase);
+                    lines.Add($"{(toggle ? "Toggle ON " : "Hold      ")}  {ButtonCatalog.Label(held.Key.ButtonName)} → {string.Join("+", held.Value)}");
+                }
+                if (_lastTapLine != null && (DateTime.UtcNow - _lastTapAt).TotalSeconds < 1.5)
+                    lines.Add(_lastTapLine);
+                return lines.Count == 0 ? "No mapped button active" : string.Join("\n", lines);
             }
         }
 
@@ -487,6 +514,7 @@ namespace X52.CustomDriver.App.ViewModels
         {
             _heldMappings.Clear();
             _keyboardService.ReleaseAll();
+            OnPropertyChanged(nameof(MappingActivityText));
         }
 
         private bool GetButtonState(X52State state, string name)
