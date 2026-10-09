@@ -23,8 +23,8 @@ namespace X52.CustomDriver.App
         private readonly Ellipse _rawDot = new() { Width = 12, Height = 12, Fill = Brush("#888888") };
         private readonly Ellipse _outDot = new() { Width = 12, Height = 12, Fill = Brush("#00D2FF") };
 
-        private readonly Rectangle _twistRaw = new() { Height = TwistH / 2, Fill = Brush("#555555") };
-        private readonly Rectangle _twistOut = new() { Height = TwistH / 2, Fill = Brush("#00D2FF") };
+        private readonly System.Windows.Shapes.Rectangle _twistRaw = new() { Height = TwistH / 2, Fill = Brush("#555555") };
+        private readonly System.Windows.Shapes.Rectangle _twistOut = new() { Height = TwistH / 2, Fill = Brush("#00D2FF") };
 
         public StickPositionView()
         {
@@ -120,7 +120,7 @@ namespace X52.CustomDriver.App
         }
 
         // Bar grows from the centre towards the twist direction
-        private static void PlaceTwist(Rectangle bar, double v)
+        private static void PlaceTwist(System.Windows.Shapes.Rectangle bar, double v)
         {
             double c = TwistW / 2;
             double end = c + v * c;
