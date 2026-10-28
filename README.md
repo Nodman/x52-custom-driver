@@ -32,7 +32,7 @@ A modern, high-performance, and open-source driver for the **Logitech/Saitek X52
 ## 🗂️ Profiles
 
 The window now has three tabs: **LIVE** (axes, buttons, status), **PROFILES** and **SETTINGS**.
-Each profile has its own button mappings, axis curves (deadzone, curvature, saturation, invert for stick X/Y and twist) and thumb stick mouse settings,
+Each profile has its own button mappings, axis curves (deadzone, curvature, saturation, invert for stick X/Y and twist), throttle deadzones (idle and full end, optional centre band with SET CENTRE HERE) and thumb stick mouse settings,
 and switches on automatically when its game .exe is running. Edits work immediately; press **SAVE** to keep them (a ● marks unsaved profiles).
 
 ## 🖱️ Thumb Stick Mouse

@@ -112,10 +112,66 @@ namespace X52.CustomDriver.Core.Models
         public double DeadzoneZ { get; set; } = 40;
         public bool InvertThrottle { get; set; } = false;
 
+        // Throttle deadzones (lower / upper end, optional centre)
+        public ThrottleSettings Throttle { get; set; } = new();
+
         // Response curves sent to vJoy (stick X = roll, stick Y = pitch, twist = rudder)
         public AxisCurve CurveX { get; set; } = new();
         public AxisCurve CurveY { get; set; } = new();
         public AxisCurve CurveTwist { get; set; } = new();
+    }
+
+    /// <summary>
+    /// Throttle response: deadzones at both ends and an optional one around a centre point.
+    /// Input and output are throttle positions 0..1 (0 = pulled back / idle, 1 = full forward).
+    /// All values are fractions of the travel.
+    /// </summary>
+    public class ThrottleSettings
+    {
+        public double LowerDeadzone { get; set; } = 0.0;   // travel at the idle end that still counts as 0%
+        public double UpperDeadzone { get; set; } = 0.0;   // travel at the full end that already counts as 100%
+        public double CenterDeadzone { get; set; } = 0.0;  // total width of the band that outputs exactly 50% (0 = off)
+        public double CenterPosition { get; set; } = 0.5;  // where that band sits (physical position)
+        public bool Invert { get; set; } = false;
+
+        public const double MaxEndDeadzone = 0.4, MaxCenterDeadzone = 0.4;
+
+        /// <summary>The zones as physical positions, for drawing: active travel lo..hi, centre band.</summary>
+        public (double lo, double hi, bool hasCenter, double centerLo, double centerHi) Zones()
+        {
+            double lo = Math.Clamp(LowerDeadzone, 0.0, MaxEndDeadzone);
+            double hi = 1.0 - Math.Clamp(UpperDeadzone, 0.0, MaxEndDeadzone);
+            if (hi < lo + 0.05) hi = Math.Min(1.0, lo + 0.05);
+
+            double half = Math.Clamp(CenterDeadzone, 0.0, MaxCenterDeadzone) / 2.0;
+            if (half <= 0.0) return (lo, hi, false, 0, 0);
+
+            // Keep the band inside the active travel with a little room on both sides
+            double min = lo + half + 0.01, max = hi - half - 0.01;
+            if (max < min) return (lo, hi, false, 0, 0);
+            double c = Math.Clamp(CenterPosition, min, max);
+            return (lo, hi, true, c - half, c + half);
+        }
+
+        public double Apply(double t)
+        {
+            t = Math.Clamp(t, 0.0, 1.0);
+            var (lo, hi, hasCenter, cLo, cHi) = Zones();
+            double u;
+            if (!hasCenter) u = Lin(t, lo, hi);
+            else if (t <= cLo) u = 0.5 * Lin(t, lo, cLo);
+            else if (t >= cHi) u = 0.5 + 0.5 * Lin(t, cHi, hi);
+            else u = 0.5;
+            return Invert ? 1.0 - u : u;
+        }
+
+        private static double Lin(double t, double a, double b) =>
+            b <= a ? (t >= b ? 1.0 : 0.0) : Math.Clamp((t - a) / (b - a), 0.0, 1.0);
+
+        public void Reset()
+        {
+            LowerDeadzone = 0.0; UpperDeadzone = 0.0; CenterDeadzone = 0.0; CenterPosition = 0.5; Invert = false;
+        }
     }
 
     /// <summary>

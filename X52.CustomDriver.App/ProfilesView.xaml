@@ -196,6 +196,11 @@
                     <local:CurveEditorView x:Name="CurveEditor"/>
                 </TabItem>
 
+                <!-- Throttle deadzones -->
+                <TabItem Header="THROTTLE">
+                    <local:ThrottleEditorView x:Name="ThrottleEditor"/>
+                </TabItem>
+
                 <!-- Thumb stick mouse -->
                 <TabItem Header="THUMB STICK MOUSE">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">

@@ -630,9 +630,10 @@ namespace X52.CustomDriver.App.ViewModels
             int vY = CurveToVJoy(axes.CurveY, s.Y, 2048);
             int vZ = CurveToVJoy(axes.CurveTwist, s.Z, 1024);
 
-            // Throttle Calibration: Physical [245 -> 10] maps to [255 -> 0]
-            // Scale to vJoy (0-32768)
-            int vT = (255 - s.Throttle) * 128; 
+            // Throttle: per-profile deadzones on the position (0 = idle, 1 = full forward).
+            // vJoy keeps the X52's own direction (full forward = low value) unless inverted.
+            var thr = axes.Throttle ?? new ThrottleSettings();
+            int vT = (int)Math.Round((1.0 - thr.Apply(s.Throttle / 255.0)) * 32768);
             
             int vR1 = s.Rotary1 * 128;
             int vR2 = s.Rotary2 * 128;
@@ -942,6 +943,9 @@ namespace X52.CustomDriver.App.ViewModels
                 default: return a.CurveX ??= new AxisCurve();
             }
         }
+
+        /// <summary>Physical throttle position, 0 (pulled back / idle) .. 1 (full forward), before deadzones.</summary>
+        public double ThrottleInput => Math.Clamp(State.Throttle / 255.0, 0.0, 1.0);
 
         /// <summary>Current physical position of an axis, -1..1, before the curve.</summary>
         public double GetLiveInput(string axis) => axis switch

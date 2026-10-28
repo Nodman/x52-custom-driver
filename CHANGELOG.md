@@ -2,6 +2,13 @@
 
 Each `## vX.Y.Z` section below becomes the notes of the GitHub Release with that tag.
 
+## v1.4.11
+
+### New
+- **Throttle deadzones** per profile (PROFILES → THROTTLE): an *idle deadzone* (that much travel still counts as 0%), a *full deadzone* (that much travel already counts as 100%, so the game reliably sees full throttle), and an optional *centre deadzone*: a band that always sends exactly 50%, e.g. for a helicopter collective. The centre sits at 50% by default; **SET CENTRE HERE** puts it where the throttle is now. Invert option.
+- Live graph like the stick curves: the deadzones shaded, the response line and a dot for the throttle right now. The LIVE tab shows the throttle as physical position vs. what the game gets.
+- Everything defaults to off, so existing profiles send the same throttle values as before.
+
 ## v1.4.10
 
 ### Fixes

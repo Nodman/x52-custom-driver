@@ -48,6 +48,7 @@ namespace X52.CustomDriver.App
         {
             _vm = vm;
             CurveEditor.Initialize(vm);
+            ThrottleEditor.Initialize(vm);
             ProfilesList.ItemsSource = vm.ProfileService.Profiles;
             vm.PropertyChanged += (s, e) =>
             {
@@ -159,6 +160,7 @@ namespace X52.CustomDriver.App
                 MappingsGrid.ItemsSource = null;
                 MousePanel.DataContext = null;
                 CurveEditor.SetProfile(null);
+                ThrottleEditor.SetProfile(null);
                 return;
             }
 
@@ -173,6 +175,7 @@ namespace X52.CustomDriver.App
             MappingsGrid.ItemsSource = _selected.Mappings;
             MousePanel.DataContext = _vm.EnsureMouseSettings(_selected);
             CurveEditor.SetProfile(_selected);
+            ThrottleEditor.SetProfile(_selected);
             UpdateMakeActiveButton();
             UpdateRevertButton();
         }
